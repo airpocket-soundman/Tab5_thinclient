@@ -6,6 +6,8 @@ import sys
 import threading
 import time
 
+RPC_CHUNK_SIZE = 2048
+
 try:
     from fuse import FUSE, FuseOSError, Operations
 except Exception as exc:
@@ -22,20 +24,22 @@ def dec(text):
 
 
 class Rpc:
-    def __init__(self, default_volume):
+    def __init__(self, default_volume, input_path=None, output_path=None):
         self.default_volume = default_volume
         self.lock = threading.Lock()
         self.next_id = 1
+        self.input = open(input_path, "r", encoding="utf-8", errors="surrogateescape") if input_path else sys.stdin
+        self.output = open(output_path, "w", encoding="utf-8", errors="surrogateescape", buffering=1) if output_path else sys.stdout
 
     def call(self, op, volume, path, *args):
         with self.lock:
             req_id = self.next_id
             self.next_id += 1
             fields = ["REQ", str(req_id), op, volume, enc(path)] + [str(arg) for arg in args]
-            sys.stdout.write("\t".join(fields) + "\n")
-            sys.stdout.flush()
+            self.output.write("\t".join(fields) + "\n")
+            self.output.flush()
             while True:
-                line = sys.stdin.readline()
+                line = self.input.readline()
                 if not line:
                     raise FuseOSError(errno.EIO)
                 parts = line.rstrip("\n").split("\t")
@@ -48,9 +52,9 @@ class Rpc:
 
 
 class Tab5Fs(Operations):
-    def __init__(self, volume):
+    def __init__(self, volume, input_path=None, output_path=None):
         self.volume = volume
-        self.rpc = Rpc(volume)
+        self.rpc = Rpc(volume, input_path, output_path)
         self.home = os.path.expanduser("~")
 
     def _local_path(self, path):
@@ -164,10 +168,23 @@ class Tab5Fs(Operations):
                 return os.read(fh, size)
             except OSError as exc:
                 raise FuseOSError(exc.errno)
-        res = self.rpc.call("read", volume, subpath, offset, min(size, 4096))
-        if len(res) < 2 or res[0] != "DATA":
-            raise FuseOSError(errno.EIO)
-        return bytes.fromhex(res[1])
+        chunks = []
+        remaining = size
+        position = offset
+        while remaining > 0:
+            request_size = min(remaining, RPC_CHUNK_SIZE)
+            res = self.rpc.call("read", volume, subpath, position, request_size)
+            if len(res) < 2 or res[0] != "DATA":
+                raise FuseOSError(errno.EIO)
+            chunk = bytes.fromhex(res[1])
+            if not chunk:
+                break
+            chunks.append(chunk)
+            position += len(chunk)
+            remaining -= len(chunk)
+            if len(chunk) < request_size:
+                break
+        return b"".join(chunks)
 
     def create(self, path, mode, fi=None):
         volume, subpath = self._target(path)
@@ -187,7 +204,11 @@ class Tab5Fs(Operations):
                 return os.write(fh, data)
             except OSError as exc:
                 raise FuseOSError(exc.errno)
-        self.rpc.call("write", volume, subpath, offset, data.hex())
+        written = 0
+        while written < len(data):
+            chunk = data[written:written + RPC_CHUNK_SIZE]
+            self.rpc.call("write", volume, subpath, offset + written, chunk.hex())
+            written += len(chunk)
         return len(data)
 
     def truncate(self, path, length, fh=None):
@@ -275,14 +296,20 @@ class Tab5Fs(Operations):
 def main():
     volume = "sd"
     mountpoint = os.path.expanduser("~/sd")
+    input_path = None
+    output_path = None
     if "--volume" in sys.argv:
         volume = sys.argv[sys.argv.index("--volume") + 1]
     if "--mount" in sys.argv:
         mountpoint = os.path.expanduser(sys.argv[sys.argv.index("--mount") + 1])
+    if "--rpc-in" in sys.argv:
+        input_path = os.path.expanduser(sys.argv[sys.argv.index("--rpc-in") + 1])
+    if "--rpc-out" in sys.argv:
+        output_path = os.path.expanduser(sys.argv[sys.argv.index("--rpc-out") + 1])
     os.makedirs(mountpoint, exist_ok=True)
     sys.stderr.write("tab5 fuse mounting %s at %s\n" % (volume, mountpoint))
     sys.stderr.flush()
-    FUSE(Tab5Fs(volume), mountpoint, foreground=True, nothreads=True, allow_other=False, nonempty=True)
+    FUSE(Tab5Fs(volume, input_path, output_path), mountpoint, foreground=True, nothreads=True, allow_other=False, nonempty=True)
 
 
 if __name__ == "__main__":

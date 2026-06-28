@@ -329,18 +329,23 @@ bool SshClient::writeBridge(const uint8_t* data, size_t len)
     ssh_set_blocking(session, 0);
     size_t sent = 0;
     uint32_t start = millis();
-    while (sent < len && millis() - start < 100) {
+    while (sent < len && millis() - start < 5000) {
         int n = ssh_channel_write(channel, data + sent, len - sent);
         if (n == SSH_AGAIN) {
             delay(1);
             continue;
         }
         if (n <= 0) {
+            stopBridge();
             return false;
         }
         sent += static_cast<size_t>(n);
     }
-    return sent == len;
+    if (sent != len) {
+        stopBridge();
+        return false;
+    }
+    return true;
 #else
     (void)data;
     (void)len;

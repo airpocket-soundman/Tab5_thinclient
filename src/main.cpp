@@ -8479,6 +8479,34 @@ String hexEncodeText(const String& text)
     return out;
 }
 
+void appendHexBytes(String& out, const uint8_t* bytes, size_t length)
+{
+    static const char* digits = "0123456789abcdef";
+    for (size_t i = 0; i < length; ++i) {
+        uint8_t b = bytes[i];
+        out += digits[b >> 4];
+        out += digits[b & 0x0F];
+    }
+}
+
+bool decodeHexChunk(const String& hex, size_t& index, uint8_t* buffer, size_t capacity, size_t& length)
+{
+    length = 0;
+    if (((hex.length() - index) & 1) != 0) {
+        return false;
+    }
+    while (index + 1 < hex.length() && length < capacity) {
+        int hi = hexValue(hex[index]);
+        int lo = hexValue(hex[index + 1]);
+        if (hi < 0 || lo < 0) {
+            return false;
+        }
+        buffer[length++] = static_cast<uint8_t>((hi << 4) | lo);
+        index += 2;
+    }
+    return true;
+}
+
 String hexDecodeText(const String& text)
 {
     String out;
@@ -8497,7 +8525,10 @@ String hexDecodeText(const String& text)
 void bridgeReply(const String& id, const String& payload)
 {
     String line = "RSP\t" + id + "\t" + payload + "\n";
-    ssh.writeBridge(reinterpret_cast<const uint8_t*>(line.c_str()), line.length());
+    if (!ssh.writeBridge(reinterpret_cast<const uint8_t*>(line.c_str()), line.length())) {
+        storageBridgeRunning = false;
+        storageBridgeLine = "";
+    }
 }
 
 void bridgeError(const String& id, int code)
@@ -8609,16 +8640,16 @@ void bridgeHandleRequest(const String& line)
             f_lseek(&file, offset);
             String data;
             data.reserve(requested * 2);
-            uint32_t count = 0;
-            while (count < requested) {
-                uint8_t b = 0;
+            uint8_t buffer[512];
+            uint32_t remaining = requested;
+            while (remaining > 0) {
                 UINT readBytes = 0;
-                if (f_read(&file, &b, 1, &readBytes) != FR_OK || readBytes == 0) {
+                UINT chunk = static_cast<UINT>(min<uint32_t>(remaining, sizeof(buffer)));
+                if (f_read(&file, buffer, chunk, &readBytes) != FR_OK || readBytes == 0) {
                     break;
                 }
-                data += hexDigit(b >> 4);
-                data += hexDigit(b);
-                ++count;
+                appendHexBytes(data, buffer, readBytes);
+                remaining -= readBytes;
             }
             f_close(&file);
             bridgeReply(id, String("OK\tDATA\t") + data);
@@ -8638,17 +8669,17 @@ void bridgeHandleRequest(const String& line)
             }
             f_lseek(&file, offset);
             String hex = parts[6];
-            for (size_t i = 0; i + 1 < hex.length(); i += 2) {
-                int hi = hexValue(hex[i]);
-                int lo = hexValue(hex[i + 1]);
-                if (hi < 0 || lo < 0) {
+            uint8_t buffer[512];
+            size_t index = 0;
+            while (index < hex.length()) {
+                size_t length = 0;
+                if (!decodeHexChunk(hex, index, buffer, sizeof(buffer), length)) {
                     f_close(&file);
                     bridgeError(id, 22);
                     return;
                 }
-                uint8_t b = static_cast<uint8_t>((hi << 4) | lo);
                 UINT wrote = 0;
-                if (f_write(&file, &b, 1, &wrote) != FR_OK || wrote != 1) {
+                if (length && (f_write(&file, buffer, length, &wrote) != FR_OK || wrote != length)) {
                     f_close(&file);
                     bridgeError(id, 5);
                     return;
@@ -8759,12 +8790,15 @@ void bridgeHandleRequest(const String& line)
         file.seek(offset);
         String data;
         data.reserve(requested * 2);
-        uint32_t count = 0;
-        while (file.available() && count < requested) {
-            uint8_t b = static_cast<uint8_t>(file.read());
-            data += hexDigit(b >> 4);
-            data += hexDigit(b);
-            ++count;
+        uint8_t buffer[512];
+        uint32_t remaining = requested;
+        while (file.available() && remaining > 0) {
+            size_t readBytes = file.read(buffer, min<uint32_t>(remaining, sizeof(buffer)));
+            if (!readBytes) {
+                break;
+            }
+            appendHexBytes(data, buffer, readBytes);
+            remaining -= readBytes;
         }
         file.close();
         bridgeReply(id, String("OK\tDATA\t") + data);
@@ -8778,7 +8812,7 @@ void bridgeHandleRequest(const String& line)
         if (offset == 0 && SD.exists(path)) {
             SD.remove(path);
         }
-        File file = SD.open(path, FILE_APPEND);
+        File file = SD.open(path, offset == 0 ? FILE_WRITE : "r+");
         if (!file) {
             bridgeError(id, 5);
             return;
@@ -8786,15 +8820,20 @@ void bridgeHandleRequest(const String& line)
         if (offset > 0) {
             file.seek(offset);
         }
-        for (size_t i = 0; i + 1 < hex.length(); i += 2) {
-            int hi = hexValue(hex[i]);
-            int lo = hexValue(hex[i + 1]);
-            if (hi < 0 || lo < 0) {
+        uint8_t buffer[512];
+        size_t index = 0;
+        while (index < hex.length()) {
+            size_t length = 0;
+            if (!decodeHexChunk(hex, index, buffer, sizeof(buffer), length)) {
                 file.close();
                 bridgeError(id, 22);
                 return;
             }
-            file.write(static_cast<uint8_t>((hi << 4) | lo));
+            if (length && file.write(buffer, length) != length) {
+                file.close();
+                bridgeError(id, 5);
+                return;
+            }
         }
         file.close();
         bridgeReply(id, "OK\tDONE");
@@ -8841,6 +8880,9 @@ void pollStorageBridge()
     char buffer[512];
     int n = ssh.readBridge(buffer, sizeof(buffer));
     if (n < 0) {
+        if (ssh.connected()) {
+            return;
+        }
         storageBridgeRunning = false;
         appendStatus("Tab5 storage bridge stopped");
         return;
@@ -8904,6 +8946,58 @@ chmod +x "$HOME/.tab5/bin/tab5-server-setup.sh")SH";
     return ssh.execCommand(script, output, error, 8000);
 }
 
+bool deployStorageSetupScript(String& error)
+{
+    String output;
+    const char* script = R"SH(mkdir -p "$HOME/.tab5/bin" &&
+cat > "$HOME/.tab5/bin/tab5-storage-setup.sh" <<'TAB5_STORAGE_SETUP_EOF'
+#!/bin/sh
+
+pkill -9 -f '[t]ab5-fuse-launch.sh' >/dev/null 2>&1 || true
+pkill -9 -f '[t]ab5-fuse-server.py' >/dev/null 2>&1 || true
+pkill -9 -f '[s]h -c rm -f .*tab5-fuse-server.py' >/dev/null 2>&1 || true
+pkill -9 -f '[c]at .*/.tab5/rpc.in' >/dev/null 2>&1 || true
+pkill -9 -f '[c]at .*/.tab5/rpc.out' >/dev/null 2>&1 || true
+
+umount_one() {
+  if command -v timeout >/dev/null 2>&1; then
+    timeout 2 "$@" >/dev/null 2>&1 || true
+  else
+    "$@" >/dev/null 2>&1 || true
+  fi
+}
+
+if command -v fusermount3 >/dev/null 2>&1; then
+  umount_one fusermount3 -uz "$HOME/.tab5/mnt"
+  umount_one fusermount3 -uz "$HOME/sd"
+  umount_one fusermount3 -uz "$HOME/usb"
+else
+  umount_one fusermount -uz "$HOME/.tab5/mnt"
+  umount_one fusermount -uz "$HOME/sd"
+  umount_one fusermount -uz "$HOME/usb"
+fi
+
+mkdir -p "$HOME/.tab5/bin" "$HOME/.tab5/mnt" || exit 1
+if [ -e "$HOME/sd" ] && [ ! -L "$HOME/sd" ]; then
+  mv "$HOME/sd" "$HOME/.tab5/sd.local.$(date +%s)"
+fi
+ln -sfn "$HOME/.tab5/mnt/sd" "$HOME/sd" || exit 1
+if [ -e "$HOME/usb" ] && [ ! -L "$HOME/usb" ]; then
+  mv "$HOME/usb" "$HOME/.tab5/usb.local.$(date +%s)"
+fi
+ln -sfn "$HOME/.tab5/mnt/usb" "$HOME/usb" || exit 1
+rm -f "$HOME/.tab5/rpc.in" "$HOME/.tab5/rpc.out"
+
+python3 -c 'import fuse' >/dev/null 2>&1 || \
+  (command -v timeout >/dev/null 2>&1 && timeout 10 python3 -m pip install --user fusepy >/dev/null 2>&1) || \
+  (command -v timeout >/dev/null 2>&1 && timeout 10 python3 -m pip install --break-system-packages --user fusepy >/dev/null 2>&1) || true
+
+echo ok
+TAB5_STORAGE_SETUP_EOF
+chmod +x "$HOME/.tab5/bin/tab5-storage-setup.sh")SH";
+    return ssh.execCommand(script, output, error, 8000);
+}
+
 void appendServerSetupHint(const String& reason, bool scriptReady)
 {
     if (reason.length()) {
@@ -8940,24 +9034,8 @@ void startStorageBridge()
     if (!setupScriptReady) {
         appendStatus(String("Tab5 server setup script deploy failed: ") + error);
     }
-    const String setup = "pkill -f '[t]ab5-fuse-server.py' >/dev/null 2>&1 || true; "
-                         "umount_one(){ if command -v timeout >/dev/null 2>&1; then timeout 2 \"$@\" >/dev/null 2>&1 || true; else \"$@\" >/dev/null 2>&1 || true; fi; }; "
-                         "if command -v fusermount3 >/dev/null 2>&1; then "
-                         "umount_one fusermount3 -uz \"$HOME/.tab5/mnt\"; "
-                         "umount_one fusermount3 -uz \"$HOME/sd\"; "
-                         "umount_one fusermount3 -uz \"$HOME/usb\"; "
-                         "else umount_one fusermount -uz \"$HOME/.tab5/mnt\"; "
-                         "umount_one fusermount -uz \"$HOME/sd\"; "
-                         "umount_one fusermount -uz \"$HOME/usb\"; fi; "
-                         "mkdir -p \"$HOME/.tab5/bin\" \"$HOME/.tab5/mnt\" && "
-                         "if [ -e \"$HOME/sd\" ] && [ ! -L \"$HOME/sd\" ]; then mv \"$HOME/sd\" \"$HOME/.tab5/sd.local.$(date +%s)\"; fi; "
-                         "ln -sfn \"$HOME/.tab5/mnt/sd\" \"$HOME/sd\" && "
-                         "if [ -e \"$HOME/usb\" ] && [ ! -L \"$HOME/usb\" ]; then mv \"$HOME/usb\" \"$HOME/.tab5/usb.local.$(date +%s)\"; fi; "
-                         "ln -sfn \"$HOME/.tab5/mnt/usb\" \"$HOME/usb\" && "
-                         "(python3 -c 'import fuse' >/dev/null 2>&1 || "
-                         "(command -v timeout >/dev/null 2>&1 && timeout 10 python3 -m pip install --user fusepy >/dev/null 2>&1) || "
-                         "(command -v timeout >/dev/null 2>&1 && timeout 10 python3 -m pip install --break-system-packages --user fusepy >/dev/null 2>&1) || true)";
-    if (!ssh.execCommand(setup, output, error, 35000)) {
+    if (!deployStorageSetupScript(error) ||
+        !ssh.execCommand("sh \"$HOME/.tab5/bin/tab5-storage-setup.sh\"", output, error, 35000)) {
         appendStatus(String("Tab5 storage setup failed: ") + error);
         appendServerSetupHint("Python/FUSE preparation failed", setupScriptReady);
         return;
@@ -9010,7 +9088,31 @@ ln -sfn "$HOME/.tab5/bin/tab5-image" "$HOME/.local/bin/image")SH";
         }
         appendStatus(String("Tab5 storage deploy skipped; using existing helper: ") + error);
     }
-    const String command = "python3 \"$HOME/.tab5/bin/tab5-fuse-server.py\" --volume all --mount \"$HOME/.tab5/mnt\"";
+    const char* launcherScript = R"SH(cat > "$HOME/.tab5/bin/tab5-fuse-launch.sh" <<'TAB5_FUSE_LAUNCH_EOF'
+#!/bin/sh
+base="$HOME/.tab5"
+rpc_in="$base/rpc.in"
+rpc_out="$base/rpc.out"
+rm -f "$rpc_in" "$rpc_out"
+mkfifo "$rpc_in" "$rpc_out" || exit 1
+cleanup() {
+  [ -n "${py_pid:-}" ] && kill "$py_pid" >/dev/null 2>&1 || true
+  [ -n "${out_pid:-}" ] && kill "$out_pid" >/dev/null 2>&1 || true
+  rm -f "$rpc_in" "$rpc_out"
+}
+trap cleanup EXIT INT TERM
+python3 "$base/bin/tab5-fuse-server.py" --volume all --mount "$base/mnt" --rpc-in "$rpc_in" --rpc-out "$rpc_out" &
+py_pid=$!
+cat "$rpc_out" &
+out_pid=$!
+cat > "$rpc_in"
+TAB5_FUSE_LAUNCH_EOF
+chmod +x "$HOME/.tab5/bin/tab5-fuse-launch.sh")SH";
+    if (!ssh.execCommand(launcherScript, output, error, 8000)) {
+        appendStatus(String("Tab5 storage launcher deploy failed: ") + error);
+        return;
+    }
+    const String command = "sh \"$HOME/.tab5/bin/tab5-fuse-launch.sh\"";
     if (!ssh.startBridge(command, error)) {
         appendStatus(String("Tab5 storage bridge failed: ") + error);
         appendServerSetupHint("Python/FUSE bridge could not start", setupScriptReady);
@@ -9414,6 +9516,27 @@ bool sendRawHex(const String& hex)
     return ssh.write(bytes, count);
 }
 
+std::vector<String> splitSerialArgs(const String& text)
+{
+    std::vector<String> args;
+    String current;
+    for (size_t i = 0; i < text.length(); ++i) {
+        char c = text[i];
+        if (c == ' ' || c == '\t') {
+            if (current.length()) {
+                args.push_back(current);
+                current = "";
+            }
+        } else {
+            current += c;
+        }
+    }
+    if (current.length()) {
+        args.push_back(current);
+    }
+    return args;
+}
+
 bool parseTrailingIndex(const String& command, size_t prefixLen, size_t& index)
 {
     String rest = command.substring(prefixLen);
@@ -9437,7 +9560,11 @@ void handleSerialCommand(String command)
         return;
     }
     Serial.print("> ");
-    Serial.println(command);
+    if (command.startsWith("wifi set ") || command.startsWith("ssh set ")) {
+        Serial.println("[redacted setup command]");
+    } else {
+        Serial.println(command);
+    }
 
     if (command == "help" || command == "?") {
         serialPrintHelp();
@@ -9524,6 +9651,25 @@ void handleSerialCommand(String command)
                       static_cast<int>(WiFi.status()),
                       WiFi.localIP().toString().c_str(),
                       WiFi.SSID().c_str());
+    } else if (command.startsWith("wifi set ")) {
+        std::vector<String> args = splitSerialArgs(command.substring(strlen("wifi set ")));
+        if (args.size() < 2) {
+            Serial.println("ERR usage wifi set <ssid> <password>");
+            return;
+        }
+        WifiProfile profile;
+        profile.name = args[0];
+        profile.ssid = args[0];
+        profile.password = args[1];
+        if (config.wifi.empty()) {
+            config.wifi.push_back(profile);
+        } else {
+            config.wifi[0] = profile;
+        }
+        activeWifi = 0;
+        saveConfig();
+        enableWifiRuntime(20000);
+        Serial.printf("OK wifi profile saved ssid=%s\r\n", profile.ssid.c_str());
     } else if (command == "wifi off") {
         stopWifiRuntime();
         Serial.println("OK wifi off");
@@ -9532,6 +9678,30 @@ void handleSerialCommand(String command)
         Serial.println("OK wifi on");
     } else if (command == "ssh list") {
         serialPrintSshProfiles();
+    } else if (command.startsWith("ssh set ")) {
+        std::vector<String> args = splitSerialArgs(command.substring(strlen("ssh set ")));
+        if (args.size() < 3) {
+            Serial.println("ERR usage ssh set <host> <user> <password> [port]");
+            return;
+        }
+        SshProfile profile;
+        profile.name = args[1] + "@" + args[0];
+        profile.host = args[0];
+        profile.user = args[1];
+        profile.password = args[2];
+        profile.port = args.size() >= 4 ? static_cast<uint16_t>(args[3].toInt()) : 22;
+        profile.terminal = "xterm-256color";
+        if (config.ssh.empty()) {
+            config.ssh.push_back(profile);
+        } else {
+            config.ssh[0] = profile;
+        }
+        activeSsh = 0;
+        saveConfig();
+        Serial.printf("OK ssh profile saved host=%s user=%s port=%u\r\n",
+                      profile.host.c_str(),
+                      profile.user.c_str(),
+                      static_cast<unsigned>(profile.port));
     } else if (command == "term dump") {
         serialDumpTerminal();
     } else if (command.startsWith("ssh active")) {
@@ -9731,6 +9901,10 @@ void loop()
     }
     if (!sshConnectJobRunning && !storageBridgeJobRunning) {
         pollStorageBridge();
+    }
+    if (ssh.connected() && !storageBridgeRunning && !storageBridgeJobRunning &&
+        millis() - storageBridgeLastStart > 10000) {
+        startStorageBridgeAsync();
     }
 
     if (!imageOverlayActive &&

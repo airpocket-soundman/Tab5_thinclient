@@ -59,6 +59,9 @@ th { color: var(--muted); font-weight: 600; }
 footer { padding: 40px 0 60px; color: var(--muted); font-size: .88rem; }
 footer p { margin-bottom: 6px; }
 .caption { text-align: center; color: var(--muted); font-size: .85rem; margin-top: 8px; }
+.demo-video { margin-top: 24px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #000; box-shadow: 0 18px 48px rgba(0,0,0,.38); }
+.demo-video video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; background: #000; }
+.demo-video .caption { margin: 0; padding: 10px 16px 12px; background: var(--panel); }
 .hero-img img, .shot img { cursor: zoom-in; }
 #lightbox { position: fixed; inset: 0; background: rgba(4,6,9,.92); display: none; align-items: center; justify-content: center; flex-direction: column; z-index: 1000; cursor: zoom-out; padding: 24px; }
 #lightbox.open { display: flex; }
@@ -243,6 +246,13 @@ tab5:/$ python /mandel.py 0 1 8 -1   <span class="c"># progressive Mandelbrot</s
 tab5:/$ python /plasma.py 0 160 16   <span class="c"># sine plasma</span>
 tab5:/$ python /life.py              <span class="c"># Conway's Game of Life</span></pre>
     <p style="margin-top:14px">Bundled demos: progressive Mandelbrot, sine plasma, wireframe hat, Game of Life, starfield, and maze. See the <a href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/docs/PYTHON.md">Python API docs</a> and the <a href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/docs/DEMOS.md">demo list</a>.</p>
+    <figure class="demo-video">
+      <video controls autoplay muted loop playsinline preload="metadata" poster="images/python-demos-poster.jpg" aria-label="Execution movie of six MicroPython graphics demos">
+        <source src="media/python-demos.mp4" type="video/mp4">
+        Your browser does not support embedded video. <a href="media/python-demos.mp4">Open the MP4</a>
+      </video>
+      <figcaption class="caption">Captured by running all six bundled scripts directly against a recorder compatible with the firmware's <code>gfx</code> API.</figcaption>
+    </figure>
   </div>
 </section>
 

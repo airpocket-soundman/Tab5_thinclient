@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tab5 SSH Client — Turn the M5Stack Tab5 into a portable SSH terminal</title>
-<meta name="description" content="Open-source firmware that turns the M5Stack Tab5 (ESP32-P4) into a portable SSH terminal with an interactive shell, SCP transfers, MicroPython, and an image viewer.">
+<title>Tab5 Thin Client — A portable thin client for M5Stack Tab5</title>
+<meta name="description" content="Open-source firmware that turns the M5Stack Tab5 (ESP32-P4) into a portable thin client with an interactive SSH shell, SCP transfers, MicroPython, and an image viewer.">
 <style>
 :root {
   --bg: #0b0e11;
@@ -82,8 +82,8 @@ footer p { margin-bottom: 6px; }
 <header class="hero">
   <div class="wrap">
     <div class="lang">English | <a href="index.html">日本語</a></div>
-    <h1><span class="prompt">tab5:/$</span> Tab5 SSH Client</h1>
-    <p class="tagline">Open-source firmware that turns the M5Stack Tab5 (ESP32-P4) into a portable SSH terminal with a real keyboard.</p>
+    <h1><span class="prompt">tab5:/$</span> Tab5 Thin Client</h1>
+    <p class="tagline">Open-source firmware that turns the M5Stack Tab5 (ESP32-P4) into a portable thin client with a real keyboard and SSH shell.</p>
     <div class="badges">
       <span class="badge">ESP32-P4</span>
       <span class="badge">1280×720 IPS</span>
@@ -103,7 +103,7 @@ footer p { margin-bottom: 6px; }
   <div class="wrap">
     <h2>What is this?</h2>
     <p class="lead">
-      Tab5 SSH Client turns the M5Stack Tab5 and the Tab5 Keyboard into an SSH terminal you can carry around.
+      Tab5 Thin Client turns the M5Stack Tab5 and the Tab5 Keyboard into an SSH terminal you can carry around.
       It connects to servers over Wi-Fi and renders a full ANSI/VT-style terminal on the 1280×720 display —
       good enough for <code>vim</code>, <code>htop</code>, and friends.
     </p>
@@ -320,7 +320,7 @@ pio run -e tab5 -t upload
 
 <footer>
   <div class="wrap">
-    <p>Tab5 SSH Client is released under the <a href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/LICENSE">MIT License</a>. SSH/SCP functionality uses LibSSH-ESP32 (LGPL-2.1-or-later); see <a href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/THIRD_PARTY_LICENSES.md">THIRD_PARTY_LICENSES</a>.</p>
+    <p>Tab5 Thin Client is released under the <a href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/LICENSE">MIT License</a>. SSH/SCP functionality uses LibSSH-ESP32 (LGPL-2.1-or-later); see <a href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/THIRD_PARTY_LICENSES.md">THIRD_PARTY_LICENSES</a>.</p>
     <p>Screenshots on this page are recreations of the on-device UI rendered with the <a href="https://lvglsim.dev/">LVGL web simulator</a> at 1280×720.</p>
     <p>M5Stack and Tab5 are trademarks of M5Stack Technology Co., Ltd. This is an unofficial community project.</p>
   </div>

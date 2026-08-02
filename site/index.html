@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tab5 SSH Client — M5Stack Tab5 をポータブルSSH端末に</title>
-<meta name="description" content="M5Stack Tab5 (ESP32-P4) をポータブルSSH端末として使うためのオープンソースファームウェア。対話型SSHシェル、SCP転送、MicroPython、画像ビューアを搭載。">
+<title>Tab5 Thin Client — M5Stack Tab5 をポータブルThin Clientに</title>
+<meta name="description" content="M5Stack Tab5 (ESP32-P4) をポータブルThin Clientとして使うためのオープンソースファームウェア。対話型SSHシェル、SCP転送、MicroPython、画像ビューアを搭載。">
 <style>
 :root {
   --bg: #0b0e11;
@@ -82,8 +82,8 @@ footer p { margin-bottom: 6px; }
 <header class="hero">
   <div class="wrap">
     <div class="lang"><a href="en.html">English</a> | 日本語</div>
-    <h1><span class="prompt">tab5:/$</span> Tab5 SSH Client</h1>
-    <p class="tagline">M5Stack Tab5 (ESP32-P4) を、キーボード付きポータブルSSH端末に変えるオープンソースファームウェア。</p>
+    <h1><span class="prompt">tab5:/$</span> Tab5 Thin Client</h1>
+    <p class="tagline">M5Stack Tab5 (ESP32-P4) を、キーボード付きポータブルThin Clientに変えるオープンソースファームウェア。</p>
     <div class="badges">
       <span class="badge">ESP32-P4</span>
       <span class="badge">1280×720 IPS</span>
@@ -103,7 +103,7 @@ footer p { margin-bottom: 6px; }
   <div class="wrap">
     <h2>これは何?</h2>
     <p class="lead">
-      Tab5 SSH Client は、M5Stack Tab5 と Tab5 Keyboard を「持ち歩けるSSH端末」にするファームウェアです。
+      Tab5 Thin Client は、M5Stack Tab5 と Tab5 Keyboard を「持ち歩けるSSH端末」にするファームウェアです。
       Wi-Fi 経由でサーバに SSH 接続し、<code>vim</code> や <code>htop</code> のような ANSI/VT 系アプリも動く
       本格的なターミナルエミュレータを 1280×720 の画面いっぱいに表示します。
     </p>
@@ -318,7 +318,7 @@ pio run -e tab5 -t upload
 
 <footer>
   <div class="wrap">
-    <p>Tab5 SSH Client は <a href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/LICENSE">MIT License</a> で公開されています。SSH/SCP 機能は LibSSH-ESP32 (LGPL-2.1-or-later) を使用しています。詳細は <a href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/THIRD_PARTY_LICENSES.md">THIRD_PARTY_LICENSES</a>。</p>
+    <p>Tab5 Thin Client は <a href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/LICENSE">MIT License</a> で公開されています。SSH/SCP 機能は LibSSH-ESP32 (LGPL-2.1-or-later) を使用しています。詳細は <a href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/THIRD_PARTY_LICENSES.md">THIRD_PARTY_LICENSES</a>。</p>
     <p>本ページのスクリーンショットは、実機UIを <a href="https://lvglsim.dev/">LVGL Web シミュレータ</a> (1280×720) 上で再現しレンダリングしたものです。</p>
     <p>M5Stack および Tab5 は M5Stack Technology Co., Ltd. の商標です。本プロジェクトは非公式のコミュニティプロジェクトです。</p>
   </div>

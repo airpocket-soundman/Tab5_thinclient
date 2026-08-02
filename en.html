@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tab5 Thin Client — A portable thin client for M5Stack Tab5</title>
+<meta name="description" content="Open-source firmware that turns the M5Stack Tab5 (ESP32-P4) into a portable thin client with an interactive SSH shell, SCP transfers, MicroPython, and an image viewer.">
+<style>
+:root {
+  --bg: #0b0e11;
+  --bg2: #12161b;
+  --panel: #161b22;
+  --border: #2a323c;
+  --text: #d7dde4;
+  --muted: #8b98a5;
+  --green: #00e676;
+  --green-dim: #0a7a3d;
+  --cyan: #35d5e5;
+  --navy: #0d1f5c;
+  --mono: "Consolas", "SFMono-Regular", "Menlo", monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: "Segoe UI", system-ui, sans-serif; line-height: 1.75; }
+a { color: var(--cyan); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+header.hero { padding: 72px 0 48px; background: linear-gradient(180deg, #0d1420 0%, var(--bg) 100%); border-bottom: 1px solid var(--border); }
+.lang { text-align: right; padding-top: 16px; font-size: .9rem; }
+h1 { font-size: 2.4rem; letter-spacing: .02em; }
+h1 .prompt { color: var(--green); font-family: var(--mono); }
+.tagline { color: var(--muted); font-size: 1.15rem; margin: 12px 0 28px; }
+.hero-img img, .shot img { width: 100%; border: 1px solid var(--border); border-radius: 8px; display: block; }
+.hero-img { box-shadow: 0 24px 60px rgba(0,0,0,.5); border-radius: 8px; margin-top: 8px; }
+.badges { margin: 20px 0 8px; display: flex; gap: 10px; flex-wrap: wrap; }
+.badge { font-family: var(--mono); font-size: .8rem; background: var(--panel); border: 1px solid var(--border); border-radius: 999px; padding: 4px 14px; color: var(--muted); }
+.cta { display: inline-block; margin: 8px 12px 0 0; padding: 10px 22px; border-radius: 6px; font-weight: 600; }
+.cta.primary { background: var(--green-dim); color: #fff; border: 1px solid var(--green); }
+.cta.ghost { border: 1px solid var(--border); color: var(--text); }
+section { padding: 56px 0; border-bottom: 1px solid var(--border); }
+h2 { font-size: 1.6rem; margin-bottom: 8px; color: #fff; }
+h2::before { content: "» "; color: var(--green); font-family: var(--mono); }
+.lead { color: var(--muted); margin-bottom: 28px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 20px 22px; }
+.card h3 { font-size: 1.05rem; margin-bottom: 8px; color: var(--green); }
+.card p { font-size: .95rem; color: var(--text); }
+.feature { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; align-items: center; margin: 48px 0; }
+.feature:nth-child(even) .shot { order: 2; }
+.feature h3 { font-size: 1.25rem; color: #fff; margin-bottom: 10px; }
+.feature h3 code { color: var(--green); }
+.feature p { font-size: .98rem; }
+.feature .note { color: var(--muted); font-size: .88rem; margin-top: 10px; }
+.viewer-shell { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border: 1px solid var(--border); border-radius: 8px; background: #000; color: var(--green); font-family: var(--mono); font-size: clamp(.38rem, .72vw, .68rem); }
+.viewer-toolbar { height: 8%; display: flex; align-items: center; gap: .45%; padding: .35%; color: #fff; background: #888; }
+.viewer-tab { min-width: 8%; padding: .45% .8%; border: 1px solid #bbb; background: #8d8d8d; }
+.viewer-tab.active { border-color: #35ff67; background: #087b16; }
+.viewer-status { margin-left: auto; padding-right: .8%; }
+.viewer-console { padding: .6% .8%; line-height: 1.45; }
+.viewer-window { position: absolute; inset: 13% 3.8% 3.8% 6.2%; display: grid; grid-template-rows: auto 1fr auto; padding: .55%; border: 2px solid #00d9ff; background: #001078; box-shadow: 0 10px 28px rgba(0,0,0,.5); }
+.viewer-title { padding: 0 .3% .45%; color: #fff; border-bottom: 1px solid rgba(255,255,255,.35); }
+.viewer-image { min-height: 0; margin-top: .55%; overflow: hidden; background: #0d1117; }
+.viewer-window .viewer-image img { width: 100%; height: 100%; object-fit: contain; border: 0; border-radius: 0; cursor: zoom-in; }
+.viewer-close { padding-top: .35%; color: #35ff67; }
+@media (max-width: 820px) { .feature { grid-template-columns: 1fr; } .feature:nth-child(even) .shot { order: 0; } }
+pre.term { background: #000; border: 1px solid var(--border); border-radius: 8px; padding: 18px 20px; font-family: var(--mono); font-size: .88rem; color: var(--green); overflow-x: auto; line-height: 1.6; }
+pre.term .c { color: var(--muted); }
+table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+th { color: var(--muted); font-weight: 600; }
+footer { padding: 40px 0 60px; color: var(--muted); font-size: .88rem; }
+footer p { margin-bottom: 6px; }
+.caption { text-align: center; color: var(--muted); font-size: .85rem; margin-top: 8px; }
+.demo-video { margin-top: 24px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #000; box-shadow: 0 18px 48px rgba(0,0,0,.38); }
+.demo-video video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; background: #000; }
+.demo-video .caption { margin: 0; padding: 10px 16px 12px; background: var(--panel); }
+.roadmap-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin-top: 28px; }
+.roadmap-card { position: relative; min-height: 210px; padding: 22px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; }
+.roadmap-kicker { color: var(--cyan); font-family: var(--mono); font-size: .78rem; letter-spacing: .08em; }
+.roadmap-card h3 { margin: 30px 0 9px; color: #fff; font-size: 1.08rem; }
+.roadmap-card p { color: var(--muted); font-size: .92rem; }
+.roadmap-status { position: absolute; top: 18px; right: 18px; padding: 3px 9px; border: 1px solid var(--green-dim); border-radius: 999px; color: var(--green); font: .7rem var(--mono); letter-spacing: .05em; }
+@media (max-width: 700px) { .roadmap-grid { grid-template-columns: 1fr; } }
+.hero-img img, .shot img { cursor: zoom-in; }
+#lightbox { position: fixed; inset: 0; background: rgba(4,6,9,.92); display: none; align-items: center; justify-content: center; flex-direction: column; z-index: 1000; cursor: zoom-out; padding: 24px; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 96vw; max-height: 88vh; width: auto; border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 24px 80px rgba(0,0,0,.8); }
+#lightbox .lb-caption { color: var(--muted); font-size: .9rem; margin-top: 14px; max-width: 90vw; text-align: center; }
+#lightbox .lb-close { position: absolute; top: 16px; right: 24px; font-size: 2rem; color: var(--muted); font-family: var(--mono); }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="lang">English | <a href="index.html">日本語</a> | <a href="zh.html">中文</a></div>
+    <h1><span class="prompt">tab5:/$</span> Tab5 Thin Client</h1>
+    <p class="tagline">Open-source firmware that turns the M5Stack Tab5 (ESP32-P4) into a portable thin client with a real keyboard and SSH shell.</p>
+    <div class="badges">
+      <span class="badge">ESP32-P4</span>
+      <span class="badge">1280×720 IPS</span>
+      <span class="badge">PlatformIO</span>
+      <span class="badge">LibSSH-ESP32</span>
+      <span class="badge">MicroPython</span>
+      <span class="badge">MIT License</span>
+    </div>
+    <p>
+      <a class="cta primary" href="https://github.com/airpocket-soundman/Tab5_thinclient">GitHub repository</a>
+      <a class="cta ghost" href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/docs/COMMANDS.md">Command list</a>
+    </p>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>What is this?</h2>
+    <p class="lead">
+      Tab5 Thin Client turns the M5Stack Tab5 and the Tab5 Keyboard into an SSH terminal you can carry around.
+      It connects to servers over Wi-Fi and renders a full ANSI/VT-style terminal on the 1280×720 display —
+      good enough for <code>vim</code>, <code>htop</code>, and friends.
+    </p>
+    <div class="hero-img"><img src="images/terminal.png" alt="Tab5 local CLI screen showing boot log and help command output in green text" loading="lazy"></div>
+    <p class="caption">The local CLI right after boot. You can SSH out directly from the built-in Linux-like shell.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Highlights</h2>
+    <div class="grid">
+      <div class="card"><h3>Interactive SSH shell</h3><p>SSH via LibSSH-ESP32 with scrollback, command history, 256-color rendering, and US/JP key-layout translation.</p></div>
+      <div class="card"><h3>Profile management</h3><p>Add and edit Wi-Fi / SSH profiles in the on-device UI; they persist to flash and reconnect with one touch.</p></div>
+      <div class="card"><h3>SCP-style transfers</h3><p><code>scp get / put</code> moves files between the SSH host and the microSD card — and the server can see Tab5 storage too.</p></div>
+      <div class="card"><h3>Built-in MicroPython</h3><p>REPL, one-liners, and .py scripts from the SD card, plus a <code>gfx</code> drawing API backed by M5GFX sprites.</p></div>
+      <div class="card"><h3>Image viewer</h3><p>View JPEG / PNG / BMP from microSD, USB storage, or the SSH server in an overlay window; remote files are cached automatically.</p></div>
+      <div class="card"><h3>Three keyboard paths</h3><p>Tab5 Keyboard, USB keyboards, and BLE keyboards. Everything is reachable with <code>Esc</code> / <code>Tab</code> navigation.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Screen tour</h2>
+    <p class="lead">Renders of the on-device UI, recreated in an LVGL web simulator at 1280×720.</p>
+
+    <div class="feature">
+      <div class="shot"><img src="images/ssh_session.png" alt="Full-screen SSH terminal with colored ls, df and htop output" loading="lazy"></div>
+      <div>
+        <h3>Full-screen SSH terminal</h3>
+        <p>While connected, the menu bar disappears and the whole 1280×720 panel becomes the terminal — 127×29 cells with the default Terminus 10x20 font. ANSI colors, bold, inverse, box-drawing and block characters are all rendered.</p>
+        <p class="note">At session start the firmware deploys a small FUSE helper to the server, mounting Tab5 storage there as <code>~/sd</code> and <code>~/usb</code> so the remote shell can read and write your files directly.</p>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="shot"><img src="images/wifi_list.png" alt="Wi-Fi profile list screen with SCAN, ADD, CONNECT and OFF buttons" loading="lazy"></div>
+      <div>
+        <h3>Wi-Fi profiles</h3>
+        <p>Scan for access points, add and edit profiles, switch networks, and toggle Wi-Fi — all on the device. The focused row is highlighted navy with a cyan border.</p>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="shot"><img src="images/ssh_list.png" alt="SSH profile list screen with ADD, EDIT and CONNECT buttons" loading="lazy"></div>
+      <div>
+        <h3>SSH profiles</h3>
+        <p>Manage destinations as <code>user@host:port</code> entries. Connect from the UI or with <code>ssh connect 0</code>; direct <code>ssh user@host</code> commands reuse credentials from matching saved profiles.</p>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="shot"><img src="images/ssh_edit.png" alt="SSH profile editor with Name, Host, Port, User, Password and Term fields" loading="lazy"></div>
+      <div>
+        <h3>Profile editor</h3>
+        <p>Edit Name / Host / Port / User / Password / Term on screen and press <code>SAVE</code> to persist to flash. Passwords are masked.</p>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="shot"><img src="images/font.png" alt="Font settings screen with four Terminus font sizes and line spacing" loading="lazy"></div>
+      <div>
+        <h3>Fonts and line spacing</h3>
+        <p>Choose between Terminus 8x16, 10x20, 14x28 and 18x36, and fine-tune the line step with <code>-</code> / <code>+</code> — up to 159×35 cells per screen.</p>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="shot"><img src="images/conf.png" alt="Config screen with device name, region, UTC offset, NTP, keymap and BLE settings" loading="lazy"></div>
+      <div>
+        <h3>Device settings</h3>
+        <p>Device name, time zone, NTP server, US/JP keymap, and BLE keyboard scanning and pairing — configuration never needs a host PC.</p>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="shot">
+        <div class="viewer-shell" role="img" aria-label="Tab5 image viewer displaying an AI-generated portrait of a blonde woman against a summer sky">
+          <div class="viewer-toolbar"><span class="viewer-tab">TERM</span><span class="viewer-tab">WIFI</span><span class="viewer-tab">SSH</span><span class="viewer-tab">FONT</span><span class="viewer-tab">CONF</span><span class="viewer-tab active">CONN</span><span class="viewer-status">WiFi ok&nbsp;&nbsp; SSH down</span></div>
+          <div class="viewer-console">tab5:/$ image sd:/photos/portrait-ai.png fit</div>
+          <div class="viewer-window">
+            <div class="viewer-title">Image: sd:/photos/portrait-ai.png</div>
+            <div class="viewer-image"><img src="images/viewer-woman-ai.png" alt="AI-generated adult blonde woman with blue eyes wearing a pink summer dress against a summer sky" loading="lazy"></div>
+            <div class="viewer-close">Esc: close</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3>Image viewer</h3>
+        <p><code>image sd:/photo.jpg fit</code> shows images from microSD, USB storage, or the SSH server in an overlay window. Remote files are copied to a microSD cache before drawing.</p>
+        <p class="note">The portrait shown here is an original AI-generated image created for this page.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Terminal compatibility</h2>
+    <p class="lead">
+      The emulator implements a <strong>VT100/VT220 subset plus xterm extensions</strong> of the
+      <strong>ECMA-48 (ANSI X3.64)</strong> escape-sequence standard. It advertises
+      <code>TERM=xterm-256color</code> and negotiates and updates the SSH PTY size (SIGWINCH),
+      so keyboard-driven TUI apps — <code>vim</code>, <code>htop</code>, <code>less</code>,
+      ncurses tools, and of course <code>sl</code> — just work.
+    </p>
+
+    <div class="feature">
+      <div class="shot"><img src="images/vim.png" alt="vim editing a Python script with syntax highlighting over SSH" loading="lazy"></div>
+      <div>
+        <h3><code>vim</code> works out of the box</h3>
+        <p>The alternate screen buffer (<code>?1049</code>/<code>?1047</code>/<code>?47</code>), DECSTBM scroll regions, cursor save/restore (DECSC/DECRC and SCOSC/SCORC), and cursor visibility (<code>?25</code>) are implemented — quit vim and your shell screen comes back. 256-color syntax highlighting renders as-is.</p>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="shot"><img src="images/sl.png" alt="the sl steam locomotive ASCII art running over SSH" loading="lazy"></div>
+      <div>
+        <h3>And yes, <code>sl</code> runs</h3>
+        <p>Absolute and relative cursor addressing (CUP/HVP/CUU/CUD/CUF/CUB/CHA/VPA), line/character insert and delete (IL/DL/ICH/DCH/ECH), display/line erase (ED/EL), and region scrolling (SU/SD) are all implemented, so full-screen animations that repaint the display render correctly.</p>
+      </div>
+    </div>
+
+    <table>
+      <tr><th>Supported</th><td>ECMA-48 CSI cursor and editing set / SGR: bold (as brightness), inverse, ANSI 16 colors, 256-color (<code>38;5</code>/<code>48;5</code>), 24-bit truecolor (<code>38;2</code>/<code>48;2</code>, quantized to RGB565) / alternate screen / scroll regions (DECSTBM) / 800-line scrollback / UTF-8 with CJK double-width / box-drawing, block, Braille (U+2800) and Powerline glyphs</td></tr>
+      <tr><th>Not supported</th><td>Mouse reporting (<code>?1000</code> family) / bracketed paste (<code>?2004</code>) / underline, italic, blink / window title (OSC 0/2) / reverse index (ESC M) / DEC special graphics charset / terminal queries (CPR/DSR/DA) / DCS imagery such as Sixel</td></tr>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Mount Tab5 storage on the server</h2>
+    <p class="lead">
+      When an SSH session starts, the firmware deploys a small FUSE helper to the server and
+      <strong>mounts the Tab5's microSD card and USB drive as <code>~/sd</code> and <code>~/usb</code> on the server</strong> —
+      file sharing in the reverse direction, where the server sees the Tab5.
+    </p>
+    <div class="feature">
+      <div class="shot"><img src="images/mount.png" alt="server shell showing tab5-sd and tab5-usb in df -h and writing to ~/sd with cp and tar" loading="lazy"></div>
+      <div>
+        <h3>Read and write straight from the server shell</h3>
+        <p>Your everyday commands — <code>cp</code>, <code>tar</code>, <code>rsync</code> — operate directly on Tab5 storage. Copy build artifacts or logs into <code>~/sd</code> and carry them home on the tablet. The server-side <code>image</code> command can even display pictures from <code>~/sd</code> on the Tab5 screen.</p>
+        <p class="note">The Tab5-local CLI exposes three volumes as a virtual filesystem: onboard flash (<code>/flash</code>), microSD (<code>/sd</code>), and USB storage (<code>/usb</code>). The server-side mounts cover microSD and USB. Server requirements: Python 3 + FUSE user mounts (<a href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/docs/SERVER_SETUP.md">setup guide</a>).</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>MicroPython and graphics demos</h2>
+    <p class="lead">Start MicroPython from the local CLI and run scripts from the SD card. Scripts draw through the <code>gfx</code> object and push frames with <code>gfx.present()</code>.</p>
+    <pre class="term">tab5:/$ python -c print('hello')
+hello
+tab5:/$ python /mandel.py 0 1 8 -1   <span class="c"># progressive Mandelbrot</span>
+tab5:/$ python /plasma.py 0 160 16   <span class="c"># sine plasma</span>
+tab5:/$ python /life.py              <span class="c"># Conway's Game of Life</span></pre>
+    <p style="margin-top:14px">Bundled demos: progressive Mandelbrot, sine plasma, wireframe hat, Game of Life, starfield, and maze. See the <a href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/docs/PYTHON.md">Python API docs</a> and the <a href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/docs/DEMOS.md">demo list</a>.</p>
+    <figure class="demo-video">
+      <video controls autoplay muted loop playsinline preload="metadata" poster="images/python-demos-poster.jpg" aria-label="Execution movie of six MicroPython graphics demos">
+        <source src="media/python-demos.mp4" type="video/mp4">
+        Your browser does not support embedded video. <a href="media/python-demos.mp4">Open the MP4</a>
+      </video>
+      <figcaption class="caption">All six bundled scripts run directly. Estimated costs for MicroPython computation, <code>gfx</code> command processing, and <code>present()</code> transfer simulate their execution speed on Tab5.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Planned upgrades</h2>
+    <p class="lead">The next major upgrade is VPN access from Tab5 through a WireGuard gateway to SSH hosts inside a Tailscale network. Work is staged so portability, connectivity, and practical performance are validated in order. These features are not implemented yet. See the <a href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/docs/VPN_PLAN.ja.md">VPN implementation and measurement plan</a> (Japanese).</p>
+    <div class="roadmap-grid">
+      <article class="roadmap-card">
+        <span class="roadmap-kicker">M0 / PORTABILITY POC</span><span class="roadmap-status">NEXT</span>
+        <h3>Port WireGuard to ESP32-P4</h3>
+        <p>Build an lwIP WireGuard implementation under pioarduino and verify initialization and basic operation. Fall back to another implementation or SSH jumping if it is not viable.</p>
+      </article>
+      <article class="roadmap-card">
+        <span class="roadmap-kicker">M1—M3 / CONNECT</span><span class="roadmap-status">PLANNED</span>
+        <h3>VPN profiles and automatic SSH login</h3>
+        <p>Add VPN list/editor UI, <code>vpn connect/status</code> commands, split tunneling, and MagicDNS. SSH profiles will bring up their required VPN automatically.</p>
+      </article>
+      <article class="roadmap-card">
+        <span class="roadmap-kicker">M4—M5 / VALIDATE</span><span class="roadmap-status">PLANNED</span>
+        <h3>Measure speed, memory, and endurance</h3>
+        <p>Compare SSH/SCP/FUSE throughput, CPU and free heap, eight-hour connection stability, Wi-Fi recovery, and battery runtime before calling the design practical.</p>
+      </article>
+      <article class="roadmap-card">
+        <span class="roadmap-kicker">RELIABILITY / STORAGE</span><span class="roadmap-status">OPEN ISSUE</span>
+        <h3>Harden settings persistence</h3>
+        <p>Make LittleFS mounting and Wi-Fi/SSH profile persistence reliable, including launches through M5Launcher. Progress is tracked in <a href="https://github.com/airpocket-soundman/Tab5_thinclient/issues/1">Issue #1</a>.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>What you need</h2>
+    <table>
+      <tr><th>Hardware</th><td>M5Stack Tab5 / Tab5 Keyboard / microSD card / USB cable</td></tr>
+      <tr><th>Network</th><td>A Wi-Fi network the Tab5 can join, and an SSH server to talk to</td></tr>
+      <tr><th>Server side (optional)</th><td>For the storage-mount feature: Python 3 + FUSE user mounts (<a href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/docs/SERVER_SETUP.md">setup guide</a>)</td></tr>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Build and flash</h2>
+    <p class="lead">Built with PlatformIO. See the <a href="https://github.com/airpocket-soundman/Tab5_thinclient#readme">README</a> for details.</p>
+    <pre class="term"><span class="c"># build</span>
+pio run -e tab5
+
+<span class="c"># flash the firmware</span>
+pio run -e tab5 -t upload
+
+<span class="c"># full flash: bootloader / partition table / firmware / LittleFS</span>
+.\tools\flash_tab5.ps1 -Port COM4</pre>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>Tab5 Thin Client is released under the <a href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/LICENSE">MIT License</a>. SSH/SCP functionality uses LibSSH-ESP32 (LGPL-2.1-or-later); see <a href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/THIRD_PARTY_LICENSES.md">THIRD_PARTY_LICENSES</a>.</p>
+    <p>Screenshots on this page are recreations of the on-device UI rendered with the <a href="https://lvglsim.dev/">LVGL web simulator</a> at 1280×720.</p>
+    <p>M5Stack and Tab5 are trademarks of M5Stack Technology Co., Ltd. This is an unofficial community project.</p>
+  </div>
+</footer>
+
+<div id="lightbox" role="dialog" aria-modal="true" aria-label="Enlarged image">
+  <span class="lb-close" aria-hidden="true">&times;</span>
+  <img alt="">
+  <div class="lb-caption"></div>
+</div>
+<script>
+(function () {
+  var lb = document.getElementById('lightbox');
+  var lbImg = lb.querySelector('img');
+  var lbCap = lb.querySelector('.lb-caption');
+  function close() {
+    lb.classList.remove('open');
+    lbImg.src = '';
+    document.body.style.overflow = '';
+  }
+  document.querySelectorAll('.hero-img img, .shot img').forEach(function (img) {
+    img.addEventListener('click', function () {
+      lbImg.src = img.src;
+      lbImg.alt = img.alt;
+      lbCap.textContent = img.alt;
+      lb.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    });
+  });
+  lb.addEventListener('click', close);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && lb.classList.contains('open')) close();
+  });
+})();
+</script>
+</body>
+</html>

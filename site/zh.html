@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tab5 Thin Client — M5Stack Tab5 便携式瘦客户端</title>
+<meta name="description" content="将 M5Stack Tab5（ESP32-P4）变成便携式瘦客户端的开源固件，支持交互式 SSH、SCP 传输、MicroPython 和图片查看器。">
+<link rel="stylesheet" href="zh.css">
+</head>
+<body>
+<header class="hero"><div class="wrap">
+  <div class="lang"><a href="en.html">English</a> | <a href="index.html">日本語</a> | 中文</div>
+  <h1><span class="prompt">tab5:/$</span> Tab5 Thin Client</h1>
+  <p class="tagline">把 M5Stack Tab5（ESP32-P4）变成配有实体键盘和 SSH Shell 的便携式瘦客户端。</p>
+  <div class="badges"><span class="badge">ESP32-P4</span><span class="badge">1280×720 IPS</span><span class="badge">PlatformIO</span><span class="badge">LibSSH-ESP32</span><span class="badge">MicroPython</span><span class="badge">MIT License</span></div>
+  <p><a class="cta primary" href="https://github.com/airpocket-soundman/Tab5_thinclient">GitHub 仓库</a><a class="cta ghost" href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/docs/COMMANDS.md">命令列表</a></p>
+</div></header>
+
+<section><div class="wrap">
+  <h2>这是什么？</h2>
+  <p class="lead">Tab5 Thin Client 将 M5Stack Tab5 和 Tab5 Keyboard 变成可随身携带的 SSH 终端。它通过 Wi-Fi 连接服务器，并在 1280×720 屏幕上显示完整的 ANSI/VT 风格终端，可流畅运行 <code>vim</code>、<code>htop</code> 等程序。</p>
+  <div class="hero-img"><img src="images/terminal.png" alt="Tab5 本地 CLI 画面，以绿色文字显示启动日志和 help 命令输出" loading="lazy"></div>
+  <p class="caption">启动后的本地 CLI。可从内置的类 Linux Shell 直接建立 SSH 连接。</p>
+</div></section>
+
+<section><div class="wrap"><h2>主要功能</h2><div class="grid">
+  <div class="card"><h3>交互式 SSH Shell</h3><p>通过 LibSSH-ESP32 建立 SSH 连接，支持回滚、命令历史、256 色显示以及美式/日式键盘布局转换。</p></div>
+  <div class="card"><h3>配置文件管理</h3><p>可在设备界面中添加和编辑 Wi-Fi / SSH 配置，保存到闪存并一键重新连接。</p></div>
+  <div class="card"><h3>类 SCP 文件传输</h3><p>使用 <code>scp get / put</code> 在 SSH 主机与 microSD 之间传输文件，服务器也能访问 Tab5 存储。</p></div>
+  <div class="card"><h3>内置 MicroPython</h3><p>支持 REPL、单行命令和 SD 卡中的 .py 脚本，并提供基于 M5GFX Sprite 的 <code>gfx</code> 绘图 API。</p></div>
+  <div class="card"><h3>图片查看器</h3><p>以浮窗方式查看 microSD、USB 存储或 SSH 服务器上的 JPEG / PNG / BMP，远程文件会自动缓存。</p></div>
+  <div class="card"><h3>三种键盘连接方式</h3><p>支持 Tab5 Keyboard、USB 键盘和 BLE 键盘，使用 <code>Esc</code> / <code>Tab</code> 即可完成界面操作。</p></div>
+</div></div></section>
+
+<section><div class="wrap"><h2>界面导览</h2><p class="lead">使用 LVGL Web 模拟器以 1280×720 分辨率重现的设备界面。</p>
+  <div class="feature"><div class="shot"><img src="images/ssh_session.png" alt="全屏 SSH 终端，显示彩色的 ls、df 和 htop 输出" loading="lazy"></div><div><h3>全屏 SSH 终端</h3><p>连接后菜单栏会隐藏，整个 1280×720 屏幕成为终端。默认 Terminus 10x20 字体可显示 127 列×29 行，并支持 ANSI 颜色、粗体、反色、制表线和块字符。</p><p class="note">会话开始时，固件会在服务器上部署一个小型 FUSE 助手，将 Tab5 存储挂载为 <code>~/sd</code> 和 <code>~/usb</code>，远程 Shell 可直接读写文件。</p></div></div>
+  <div class="feature"><div class="shot"><img src="images/wifi_list.png" alt="带有 SCAN、ADD、CONNECT 和 OFF 按钮的 Wi-Fi 配置列表" loading="lazy"></div><div><h3>Wi-Fi 配置</h3><p>无需电脑即可扫描接入点、添加和编辑配置、切换网络及开关 Wi-Fi。当前行以深蓝底色和青色边框高亮。</p></div></div>
+  <div class="feature"><div class="shot"><img src="images/ssh_list.png" alt="带有 ADD、EDIT 和 CONNECT 按钮的 SSH 配置列表" loading="lazy"></div><div><h3>SSH 配置</h3><p>以 <code>user@host:port</code> 形式管理连接目标。可从界面或使用 <code>ssh connect 0</code> 连接；直接执行 <code>ssh user@host</code> 时会复用匹配配置中的认证信息。</p></div></div>
+  <div class="feature"><div class="shot"><img src="images/ssh_edit.png" alt="包含 Name、Host、Port、User、Password 和 Term 字段的 SSH 配置编辑器" loading="lazy"></div><div><h3>配置编辑器</h3><p>在屏幕上编辑 Name / Host / Port / User / Password / Term，并按 <code>SAVE</code> 保存至闪存。密码会以掩码显示。</p></div></div>
+  <div class="feature"><div class="shot"><img src="images/font.png" alt="包含四种 Terminus 字号和行距设置的字体画面" loading="lazy"></div><div><h3>字体和行距</h3><p>可选择 Terminus 8x16、10x20、14x28 或 18x36，并用 <code>-</code> / <code>+</code> 微调行距，单屏最多显示 159 列×35 行。</p></div></div>
+  <div class="feature"><div class="shot"><img src="images/conf.png" alt="包含设备名、区域、UTC 偏移、NTP、键盘映射和 BLE 设置的配置画面" loading="lazy"></div><div><h3>设备设置</h3><p>设备名称、时区、NTP 服务器、美式/日式键盘映射以及 BLE 键盘扫描和配对，均可在设备上完成。</p></div></div>
+  <div class="feature"><div class="shot"><div class="viewer-shell" role="img" aria-label="Tab5 图片查看器显示夏日天空背景下的 AI 生成金发女性肖像"><div class="viewer-toolbar"><span class="viewer-tab">TERM</span><span class="viewer-tab">WIFI</span><span class="viewer-tab">SSH</span><span class="viewer-tab">FONT</span><span class="viewer-tab">CONF</span><span class="viewer-tab active">CONN</span><span class="viewer-status">WiFi ok&nbsp;&nbsp; SSH down</span></div><div class="viewer-console">tab5:/$ image sd:/photos/portrait-ai.png fit</div><div class="viewer-window"><div class="viewer-title">Image: sd:/photos/portrait-ai.png</div><div class="viewer-image"><img src="images/viewer-woman-ai.png" alt="夏日天空下身穿粉色连衣裙的 AI 生成成年金发蓝眼女性" loading="lazy"></div><div class="viewer-close">Esc: close</div></div></div></div><div><h3>图片查看器</h3><p><code>image sd:/photo.jpg fit</code> 可在浮窗中显示 microSD、USB 存储或 SSH 服务器上的图片。远程文件会先复制到 microSD 缓存再绘制。</p><p class="note">示例肖像是专为本页面生成的原创 AI 图片。</p></div></div>
+</div></section>
+
+<section><div class="wrap"><h2>终端兼容性</h2><p class="lead">模拟器实现了 <strong>ECMA-48（ANSI X3.64）</strong>转义序列标准中的 <strong>VT100/VT220 子集及 xterm 扩展</strong>。它报告 <code>TERM=xterm-256color</code>，并在字体变化时自动更新 SSH PTY 尺寸（SIGWINCH），因此 <code>vim</code>、<code>htop</code>、<code>less</code>、ncurses 工具以及 <code>sl</code> 均可直接运行。</p>
+  <div class="feature"><div class="shot"><img src="images/vim.png" alt="通过 SSH 使用 vim 编辑带语法高亮的 Python 脚本" loading="lazy"></div><div><h3><code>vim</code> 开箱即用</h3><p>支持备用屏幕缓冲区（<code>?1049</code>/<code>?1047</code>/<code>?47</code>）、DECSTBM 滚动区域、光标保存/恢复（DECSC/DECRC、SCOSC/SCORC）及光标显示控制（<code>?25</code>）。退出 vim 后会恢复原 Shell 画面，256 色语法高亮也可正常显示。</p></div></div>
+  <div class="feature"><div class="shot"><img src="images/sl.png" alt="通过 SSH 运行 sl 蒸汽机车 ASCII 动画" loading="lazy"></div><div><h3>当然也能运行 <code>sl</code></h3><p>实现了光标绝对/相对移动、行和字符插入/删除、画面和行清除以及区域滚动，因此会持续重绘屏幕的全屏动画也能正确显示。</p></div></div>
+  <table><tr><th>支持</th><td>ECMA-48 CSI 光标与编辑指令 / SGR：粗体、反色、ANSI 16 色、256 色、24 位真彩色（量化为 RGB565）/ 备用屏幕 / 滚动区域 / 800 行回滚 / UTF-8 与 CJK 双宽字符 / 制表线、块、盲文及 Powerline 字形</td></tr><tr><th>不支持</th><td>鼠标报告（<code>?1000</code> 系列）/ bracketed paste（<code>?2004</code>）/ 下划线、斜体、闪烁 / 窗口标题 / 反向索引 / DEC 特殊图形字符集 / 终端查询响应 / Sixel 等 DCS 图片</td></tr></table>
+</div></section>
+
+<section><div class="wrap"><h2>将 Tab5 存储挂载到服务器</h2><p class="lead">SSH 会话开始时，固件会向服务器部署小型 FUSE 助手，<strong>将 Tab5 的 microSD 卡和 USB 存储挂载为服务器上的 <code>~/sd</code> 和 <code>~/usb</code></strong>，让服务器反向访问 Tab5。</p><div class="feature"><div class="shot"><img src="images/mount.png" alt="服务器 Shell 在 df -h 中显示 tab5-sd 和 tab5-usb，并通过 cp 和 tar 写入 ~/sd" loading="lazy"></div><div><h3>从服务器 Shell 直接读写</h3><p><code>cp</code>、<code>tar</code>、<code>rsync</code> 等常用命令可直接操作 Tab5 存储。将构建产物或日志复制到 <code>~/sd</code> 后即可随设备带走。服务器端的 <code>image</code> 命令还能在 Tab5 屏幕上显示 <code>~/sd</code> 中的图片。</p><p class="note">Tab5 本地 CLI 提供板载闪存（<code>/flash</code>）、microSD（<code>/sd</code>）和 USB（<code>/usb</code>）三个虚拟卷；服务器侧挂载 microSD 与 USB。服务器要求：Python 3 + FUSE 用户挂载（<a href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/docs/SERVER_SETUP.md">设置指南</a>）。</p></div></div></div></section>
+
+<section><div class="wrap"><h2>MicroPython 与绘图演示</h2><p class="lead">从本地 CLI 启动 MicroPython 并运行 SD 卡中的脚本。脚本通过 <code>gfx</code> 对象绘图，并使用 <code>gfx.present()</code> 将画面传输至屏幕。</p><pre class="term">tab5:/$ python -c print('hello')
+hello
+tab5:/$ python /mandel.py 0 1 8 -1   <span class="c"># 渐进式 Mandelbrot</span>
+tab5:/$ python /plasma.py 0 160 16   <span class="c"># 正弦 plasma</span>
+tab5:/$ python /life.py              <span class="c"># Conway 生命游戏</span></pre><p style="margin-top:14px">内置演示：渐进式 Mandelbrot、正弦 plasma、线框帽、生命游戏、星空和迷宫。详情请参阅 <a href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/docs/PYTHON.md">Python API 文档</a>和<a href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/docs/DEMOS.md">演示列表</a>。</p><figure class="demo-video"><video controls autoplay muted loop playsinline preload="metadata" poster="images/python-demos-poster.jpg" aria-label="六个 MicroPython 绘图演示的运行视频"><source src="media/python-demos.mp4" type="video/mp4">您的浏览器不支持嵌入视频。<a href="media/python-demos.mp4">打开 MP4</a></video><figcaption class="caption">直接运行全部六个内置脚本，并根据 MicroPython 运算、<code>gfx</code> 命令处理和 <code>present()</code> 传输的估算成本模拟其在 Tab5 上的执行速度。</figcaption></figure></div></section>
+
+<section><div class="wrap"><h2>计划中的升级</h2><p class="lead">下一项重大升级是让 Tab5 通过 WireGuard 网关访问 Tailscale 网络内的 SSH 主机。开发将分阶段验证移植性、连接性和实际性能。这些功能尚未实现，详情见<a href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/docs/VPN_PLAN.ja.md">VPN 实现与测量计划</a>（日文）。</p><div class="roadmap-grid">
+  <article class="roadmap-card"><span class="roadmap-kicker">M0 / PORTABILITY POC</span><span class="roadmap-status">下一步</span><h3>将 WireGuard 移植到 ESP32-P4</h3><p>在 pioarduino 环境中构建 lwIP WireGuard 实现并验证初始化和基本操作；若不可行则切换其他实现或 SSH 跳板方案。</p></article>
+  <article class="roadmap-card"><span class="roadmap-kicker">M1—M3 / CONNECT</span><span class="roadmap-status">计划中</span><h3>VPN 配置和自动 SSH 连接</h3><p>添加 VPN 列表/编辑界面、<code>vpn connect/status</code> 命令、分流和 MagicDNS。SSH 配置将自动启动所需 VPN。</p></article>
+  <article class="roadmap-card"><span class="roadmap-kicker">M4—M5 / VALIDATE</span><span class="roadmap-status">计划中</span><h3>测量速度、内存和稳定性</h3><p>比较 SSH/SCP/FUSE 吞吐量、CPU 与可用堆、八小时连接稳定性、Wi-Fi 恢复及电池续航。</p></article>
+  <article class="roadmap-card"><span class="roadmap-kicker">RELIABILITY / STORAGE</span><span class="roadmap-status">待解决</span><h3>提高设置持久化可靠性</h3><p>包括通过 M5Launcher 启动的场景，增强 LittleFS 挂载及 Wi-Fi/SSH 配置保存的可靠性。进度见 <a href="https://github.com/airpocket-soundman/Tab5_thinclient/issues/1">Issue #1</a>。</p></article>
+</div></div></section>
+
+<section><div class="wrap"><h2>所需设备</h2><table><tr><th>硬件</th><td>M5Stack Tab5 / Tab5 Keyboard / microSD 卡 / USB 线</td></tr><tr><th>网络</th><td>Tab5 可连接的 Wi-Fi 网络及 SSH 服务器</td></tr><tr><th>服务器端（可选）</th><td>若使用存储挂载功能：Python 3 + FUSE 用户挂载（<a href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/docs/SERVER_SETUP.md">设置指南</a>）</td></tr></table></div></section>
+
+<section><div class="wrap"><h2>构建与烧录</h2><p class="lead">使用 PlatformIO 构建，详情请参阅 <a href="https://github.com/airpocket-soundman/Tab5_thinclient#readme">README</a>。</p><pre class="term"><span class="c"># 构建</span>
+pio run -e tab5
+
+<span class="c"># 烧录固件</span>
+pio run -e tab5 -t upload
+
+<span class="c"># 完整烧录：bootloader / 分区表 / 固件 / LittleFS</span>
+.\tools\flash_tab5.ps1 -Port COM4</pre></div></section>
+
+<footer><div class="wrap"><p>Tab5 Thin Client 以 <a href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/LICENSE">MIT License</a> 发布。SSH/SCP 功能使用 LibSSH-ESP32（LGPL-2.1-or-later），详情见 <a href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/THIRD_PARTY_LICENSES.md">THIRD_PARTY_LICENSES</a>。</p><p>本页面截图是在 <a href="https://lvglsim.dev/">LVGL Web 模拟器</a>中以 1280×720 重现并渲染的设备界面。</p><p>M5Stack 和 Tab5 是 M5Stack Technology Co., Ltd. 的商标。本项目是非官方社区项目。</p></div></footer>
+<div id="lightbox" role="dialog" aria-modal="true" aria-label="放大图片"><span class="lb-close" aria-hidden="true">&times;</span><img alt=""><div class="lb-caption"></div></div>
+<script>(function(){var lb=document.getElementById('lightbox'),lbImg=lb.querySelector('img'),lbCap=lb.querySelector('.lb-caption');function close(){lb.classList.remove('open');lbImg.src='';document.body.style.overflow=''}document.querySelectorAll('.hero-img img, .shot img').forEach(function(img){img.addEventListener('click',function(){lbImg.src=img.src;lbImg.alt=img.alt;lbCap.textContent=img.alt;lb.classList.add('open');document.body.style.overflow='hidden'})});lb.addEventListener('click',close);document.addEventListener('keydown',function(e){if(e.key==='Escape'&&lb.classList.contains('open'))close()})})();</script>
+</body>
+</html>

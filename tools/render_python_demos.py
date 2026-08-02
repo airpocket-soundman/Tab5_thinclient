@@ -51,25 +51,47 @@ def rgb(value: int) -> tuple[int, int, int]:
 
 
 class RecorderGfx:
-    def __init__(self, capture_every: int = 1) -> None:
+    """Firmware-compatible drawing API with an estimated Tab5 timing model.
+
+    The model accounts for command marshalling/parsing, sprite drawing, the
+    full-frame ``present`` transfer, and demo-specific Python work between
+    presents.  It is intentionally kept separate from wall-clock time so movie
+    generation remains fast and deterministic.
+    """
+
+    RECT_MS = 0.18
+    LINE_MS = 0.20
+    PIXEL_MS = 0.08
+    CLEAR_MS = 0.50
+    TEXT_MS = 0.35
+    PRESENT_MS = 18.0
+    MONO_CELL_MS = 0.015
+
+    def __init__(self, capture_every: int = 1, compute_ms_per_present: float = 0.0) -> None:
         self.image = Image.new("RGB", (DISPLAY_W, CANVAS_H), "black")
         self.draw = ImageDraw.Draw(self.image)
         self.capture_every = max(1, capture_every)
+        self.compute_ms_per_present = max(0.0, compute_ms_per_present)
         self.present_count = 0
         self.captured: list[Image.Image] = []
+        self.capture_times_ms: list[float] = []
+        self.simulated_ms = 0.0
 
     def size(self) -> tuple[int, int]:
         return DISPLAY_W, CANVAS_H
 
     def clear(self, color: int = 0) -> None:
         self.draw.rectangle((0, 0, DISPLAY_W - 1, CANVAS_H - 1), fill=rgb(color))
+        self.simulated_ms += self.CLEAR_MS
 
     def pixel(self, x: int, y: int, color: int) -> None:
         if 0 <= x < DISPLAY_W and 0 <= y < CANVAS_H:
             self.draw.point((x, y), fill=rgb(color))
+        self.simulated_ms += self.PIXEL_MS
 
     def line(self, x0: int, y0: int, x1: int, y1: int, color: int) -> None:
         self.draw.line((x0, y0, x1, y1), fill=rgb(color), width=1)
+        self.simulated_ms += self.LINE_MS
 
     def rect(self, x: int, y: int, w: int, h: int, color: int, fill: int = 1) -> None:
         if w <= 0 or h <= 0:
@@ -79,6 +101,7 @@ class RecorderGfx:
             self.draw.rectangle(box, fill=rgb(color))
         else:
             self.draw.rectangle(box, outline=rgb(color), width=1)
+        self.simulated_ms += self.RECT_MS
 
     def fill(self, x: int, y: int, w: int, h: int, color: int) -> None:
         self.rect(x, y, w, h, color, 1)
@@ -89,12 +112,14 @@ class RecorderGfx:
             self.draw.ellipse(box, fill=rgb(color))
         else:
             self.draw.ellipse(box, outline=rgb(color), width=1)
+        self.simulated_ms += self.RECT_MS
 
     def text(self, x: int, y: int, value: str, color: int = 0xFFFFFF) -> None:
         # The firmware uses an opaque 8x16 ASCII font on a black background.
         width = max(1, len(value) * 10)
         self.draw.rectangle((x, y, x + width, y + 18), fill="black")
         self.draw.text((x, y), value, fill=rgb(color), font=FONT_16)
+        self.simulated_ms += self.TEXT_MS
 
     def mono(
         self,
@@ -113,12 +138,21 @@ class RecorderGfx:
                 nibble = int(bits[index // 4], 16)
                 enabled = bool(nibble & (1 << (3 - index % 4)))
                 color = foreground if enabled else background
-                self.rect(x0 + x * cell + 1, y0 + y * cell + 1, max(1, cell - 2), max(1, cell - 2), color, 1)
+                box = (
+                    x0 + x * cell + 1,
+                    y0 + y * cell + 1,
+                    x0 + (x + 1) * cell - 2,
+                    y0 + (y + 1) * cell - 2,
+                )
+                self.draw.rectangle(box, fill=rgb(color))
+        self.simulated_ms += cols * rows * self.MONO_CELL_MS
 
     def present(self) -> None:
         self.present_count += 1
+        self.simulated_ms += self.PRESENT_MS + self.compute_ms_per_present
         if self.present_count == 1 or self.present_count % self.capture_every == 0:
             self.captured.append(self.image.copy())
+            self.capture_times_ms.append(self.simulated_ms)
 
     def final_frame(self) -> Image.Image:
         return self.image.copy()
@@ -131,15 +165,16 @@ class Demo:
     subtitle: str
     argv: tuple[str, ...]
     capture_every: int
+    compute_ms_per_present: float
 
 
 DEMOS = (
-    Demo("mandel.py", "PROGRESSIVE MANDELBROT", "coarse blocks resolve into the fractal", ("0", "1", "8", "0"), 6),
-    Demo("plasma.py", "SINE PLASMA", "four wave fields mapped into RGB", ("0", "60", "24"), 2),
-    Demo("hat.py", "WIREFRAME HAT", "row-by-row sombrero surface rendering", ("0", "1", "0"), 2),
-    Demo("life.py", "GAME OF LIFE", "25 x 25 bitmap generations", ("0", "90", "10"), 3),
-    Demo("starfield.py", "STARFIELD", "deterministic center-out flight", ("0", "70", "7"), 2),
-    Demo("maze.py", "MAZE", "depth-first generation and path finding", ("0", "25", "17"), 10),
+    Demo("mandel.py", "PROGRESSIVE MANDELBROT", "coarse blocks resolve into the fractal", ("0", "1", "8", "0"), 6, 0.0),
+    Demo("plasma.py", "SINE PLASMA", "four wave fields mapped into RGB", ("0", "60", "24"), 2, 40.0),
+    Demo("hat.py", "WIREFRAME HAT", "row-by-row sombrero surface rendering", ("0", "1", "0"), 2, 10.0),
+    Demo("life.py", "GAME OF LIFE", "25 x 25 bitmap generations", ("0", "90", "10"), 3, 90.0),
+    Demo("starfield.py", "STARFIELD", "deterministic center-out flight", ("0", "70", "7"), 2, 45.0),
+    Demo("maze.py", "MAZE", "depth-first generation and path finding", ("0", "25", "17"), 10, 6.0),
 )
 
 
@@ -162,13 +197,14 @@ def title_card(demo: Demo, command: str) -> Image.Image:
     draw.text((76, 238), demo.title, fill="white", font=FONT_34)
     draw.text((78, 296), demo.subtitle, fill=MUTED, font=FONT_20)
     draw.text((78, 360), "tab5:/$ " + command, fill=GREEN, font=FONT_20)
+    draw.text((78, 406), "ESTIMATED TAB5 TIMING / 1.0x", fill=CYAN, font=FONT_16)
     return image
 
 
-def run_demo(demos_dir: Path, demo: Demo) -> tuple[list[Image.Image], Image.Image, str]:
+def run_demo(demos_dir: Path, demo: Demo) -> tuple[list[Image.Image], list[float], Image.Image, str]:
     source = demos_dir / demo.script
     command = "python /" + demo.script + " " + " ".join(demo.argv)
-    recorder = RecorderGfx(demo.capture_every)
+    recorder = RecorderGfx(demo.capture_every, demo.compute_ms_per_present)
     namespace = {
         "__name__": "__main__",
         "__file__": str(source),
@@ -178,9 +214,13 @@ def run_demo(demos_dir: Path, demo: Demo) -> tuple[list[Image.Image], Image.Imag
     exec(compile(source.read_text(encoding="utf-8"), str(source), "exec"), namespace)
     final = recorder.final_frame()
     frames = recorder.captured
+    times_ms = recorder.capture_times_ms
     if not frames or frames[-1].tobytes() != final.tobytes():
         frames.append(final)
-    return frames, final, command
+        times_ms.append(recorder.simulated_ms)
+    durations_ms = [max(1000.0 / 15.0, times_ms[i + 1] - times_ms[i]) for i in range(len(times_ms) - 1)]
+    durations_ms.append(500.0)
+    return frames, durations_ms, final, command
 
 
 def poster(representatives: list[tuple[Demo, Image.Image]], output: Path) -> None:
@@ -222,17 +262,18 @@ def main() -> None:
         ffmpeg_log_level="warning",
     ) as writer:
         for demo in DEMOS:
-            frames, final, command = run_demo(demos_dir, demo)
+            frames, durations_ms, final, command = run_demo(demos_dir, demo)
             card = np.asarray(title_card(demo, command))
             for _ in range(max(1, args.fps * 2 // 3)):
                 writer.append_data(card)
-            for frame in frames:
-                writer.append_data(np.asarray(full_display(frame, demo.title)))
-            ending = np.asarray(full_display(final, demo.title))
-            for _ in range(max(1, args.fps // 2)):
-                writer.append_data(ending)
+            for frame, duration_ms in zip(frames, durations_ms):
+                rendered = np.asarray(full_display(frame, demo.title))
+                repeats = max(1, round(duration_ms * args.fps / 1000.0))
+                for _ in range(repeats):
+                    writer.append_data(rendered)
             representatives.append((demo, final))
-            print(f"{demo.script}: {len(frames)} captured frames")
+            simulated_seconds = sum(durations_ms) / 1000.0
+            print(f"{demo.script}: {len(frames)} captured frames / {simulated_seconds:.1f} simulated seconds")
 
     poster(representatives, poster_output)
     print(f"video:  {output}")

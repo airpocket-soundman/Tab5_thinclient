@@ -62,6 +62,13 @@ footer p { margin-bottom: 6px; }
 .demo-video { margin-top: 24px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #000; box-shadow: 0 18px 48px rgba(0,0,0,.38); }
 .demo-video video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; background: #000; }
 .demo-video .caption { margin: 0; padding: 10px 16px 12px; background: var(--panel); }
+.roadmap-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin-top: 28px; }
+.roadmap-card { position: relative; min-height: 210px; padding: 22px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; }
+.roadmap-kicker { color: var(--cyan); font-family: var(--mono); font-size: .78rem; letter-spacing: .08em; }
+.roadmap-card h3 { margin: 30px 0 9px; color: #fff; font-size: 1.08rem; }
+.roadmap-card p { color: var(--muted); font-size: .92rem; }
+.roadmap-status { position: absolute; top: 18px; right: 18px; padding: 3px 9px; border: 1px solid var(--green-dim); border-radius: 999px; color: var(--green); font: .7rem var(--mono); letter-spacing: .05em; }
+@media (max-width: 700px) { .roadmap-grid { grid-template-columns: 1fr; } }
 .hero-img img, .shot img { cursor: zoom-in; }
 #lightbox { position: fixed; inset: 0; background: rgba(4,6,9,.92); display: none; align-items: center; justify-content: center; flex-direction: column; z-index: 1000; cursor: zoom-out; padding: 24px; }
 #lightbox.open { display: flex; }
@@ -251,6 +258,35 @@ tab5:/$ python /life.py              <span class="c"># Conway's Game of Life</sp
       </video>
       <figcaption class="caption">6本の同梱スクリプトを直接実行。MicroPython演算、<code>gfx</code> コマンド処理、<code>present()</code> 転送の推定コストを積算し、Tab5上での実行速度もシミュレートしています。</figcaption>
     </figure>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>今後の改造予定</h2>
+    <p class="lead">次の大きな改造は、Tab5からWireGuardゲートウェイを経由してTailscaleネットワーク内のSSHホストへ接続するVPN機能です。段階ごとに移植性、接続性、実用性能を確認しながら進めます。機能はまだ未実装です。詳細は <a href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/docs/VPN_PLAN.ja.md">VPN実装・実測計画</a> を参照してください。</p>
+    <div class="roadmap-grid">
+      <article class="roadmap-card">
+        <span class="roadmap-kicker">M0 / PORTABILITY POC</span><span class="roadmap-status">NEXT</span>
+        <h3>ESP32-P4へWireGuardを移植</h3>
+        <p>lwIP版WireGuardをpioarduino環境でビルドし、初期化と基本動作を検証。成立しない場合は別実装またはSSH多段接続へ切り替えます。</p>
+      </article>
+      <article class="roadmap-card">
+        <span class="roadmap-kicker">M1—M3 / CONNECT</span><span class="roadmap-status">PLANNED</span>
+        <h3>VPNプロファイルと自動SSH接続</h3>
+        <p>VPN一覧・編集UI、<code>vpn connect/status</code> CLI、split tunnel、MagicDNSを追加。SSHプロファイルから必要なVPNを先に自動接続します。</p>
+      </article>
+      <article class="roadmap-card">
+        <span class="roadmap-kicker">M4—M5 / VALIDATE</span><span class="roadmap-status">PLANNED</span>
+        <h3>速度・メモリ・長時間安定性を実測</h3>
+        <p>SSH/SCP/FUSEの速度、CPU・空きヒープ、8時間接続、Wi-Fi復帰、電池持続時間を比較し、実用可能な構成へ詰めます。</p>
+      </article>
+      <article class="roadmap-card">
+        <span class="roadmap-kicker">RELIABILITY / STORAGE</span><span class="roadmap-status">OPEN ISSUE</span>
+        <h3>設定保存の信頼性改善</h3>
+        <p>M5Launcher経由の起動を含め、LittleFSのマウントとWi-Fi/SSH設定の永続化を安定化します。現在の状況は <a href="https://github.com/airpocket-soundman/Tab5_thinclient/issues/1">Issue #1</a> で追跡しています。</p>
+      </article>
+    </div>
   </div>
 </section>
 

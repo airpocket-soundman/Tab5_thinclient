@@ -62,6 +62,13 @@ footer p { margin-bottom: 6px; }
 .demo-video { margin-top: 24px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #000; box-shadow: 0 18px 48px rgba(0,0,0,.38); }
 .demo-video video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; background: #000; }
 .demo-video .caption { margin: 0; padding: 10px 16px 12px; background: var(--panel); }
+.roadmap-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin-top: 28px; }
+.roadmap-card { position: relative; min-height: 210px; padding: 22px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; }
+.roadmap-kicker { color: var(--cyan); font-family: var(--mono); font-size: .78rem; letter-spacing: .08em; }
+.roadmap-card h3 { margin: 30px 0 9px; color: #fff; font-size: 1.08rem; }
+.roadmap-card p { color: var(--muted); font-size: .92rem; }
+.roadmap-status { position: absolute; top: 18px; right: 18px; padding: 3px 9px; border: 1px solid var(--green-dim); border-radius: 999px; color: var(--green); font: .7rem var(--mono); letter-spacing: .05em; }
+@media (max-width: 700px) { .roadmap-grid { grid-template-columns: 1fr; } }
 .hero-img img, .shot img { cursor: zoom-in; }
 #lightbox { position: fixed; inset: 0; background: rgba(4,6,9,.92); display: none; align-items: center; justify-content: center; flex-direction: column; z-index: 1000; cursor: zoom-out; padding: 24px; }
 #lightbox.open { display: flex; }
@@ -253,6 +260,35 @@ tab5:/$ python /life.py              <span class="c"># Conway's Game of Life</sp
       </video>
       <figcaption class="caption">All six bundled scripts run directly. Estimated costs for MicroPython computation, <code>gfx</code> command processing, and <code>present()</code> transfer simulate their execution speed on Tab5.</figcaption>
     </figure>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Planned upgrades</h2>
+    <p class="lead">The next major upgrade is VPN access from Tab5 through a WireGuard gateway to SSH hosts inside a Tailscale network. Work is staged so portability, connectivity, and practical performance are validated in order. These features are not implemented yet. See the <a href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/docs/VPN_PLAN.ja.md">VPN implementation and measurement plan</a> (Japanese).</p>
+    <div class="roadmap-grid">
+      <article class="roadmap-card">
+        <span class="roadmap-kicker">M0 / PORTABILITY POC</span><span class="roadmap-status">NEXT</span>
+        <h3>Port WireGuard to ESP32-P4</h3>
+        <p>Build an lwIP WireGuard implementation under pioarduino and verify initialization and basic operation. Fall back to another implementation or SSH jumping if it is not viable.</p>
+      </article>
+      <article class="roadmap-card">
+        <span class="roadmap-kicker">M1—M3 / CONNECT</span><span class="roadmap-status">PLANNED</span>
+        <h3>VPN profiles and automatic SSH login</h3>
+        <p>Add VPN list/editor UI, <code>vpn connect/status</code> commands, split tunneling, and MagicDNS. SSH profiles will bring up their required VPN automatically.</p>
+      </article>
+      <article class="roadmap-card">
+        <span class="roadmap-kicker">M4—M5 / VALIDATE</span><span class="roadmap-status">PLANNED</span>
+        <h3>Measure speed, memory, and endurance</h3>
+        <p>Compare SSH/SCP/FUSE throughput, CPU and free heap, eight-hour connection stability, Wi-Fi recovery, and battery runtime before calling the design practical.</p>
+      </article>
+      <article class="roadmap-card">
+        <span class="roadmap-kicker">RELIABILITY / STORAGE</span><span class="roadmap-status">OPEN ISSUE</span>
+        <h3>Harden settings persistence</h3>
+        <p>Make LittleFS mounting and Wi-Fi/SSH profile persistence reliable, including launches through M5Launcher. Progress is tracked in <a href="https://github.com/airpocket-soundman/Tab5_thinclient/issues/1">Issue #1</a>.</p>
+      </article>
+    </div>
   </div>
 </section>
 

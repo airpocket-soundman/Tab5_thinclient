@@ -21,3 +21,4 @@ local/
 external/
 data/profiles.local.json
 dist/
+tmp/

@@ -182,6 +182,59 @@ footer p { margin-bottom: 6px; }
 
 <section>
   <div class="wrap">
+    <h2>Terminal compatibility</h2>
+    <p class="lead">
+      The emulator implements a <strong>VT100/VT220 subset plus xterm extensions</strong> of the
+      <strong>ECMA-48 (ANSI X3.64)</strong> escape-sequence standard. It advertises
+      <code>TERM=xterm-256color</code> and negotiates and updates the SSH PTY size (SIGWINCH),
+      so keyboard-driven TUI apps — <code>vim</code>, <code>htop</code>, <code>less</code>,
+      ncurses tools, and of course <code>sl</code> — just work.
+    </p>
+
+    <div class="feature">
+      <div class="shot"><img src="images/vim.png" alt="vim editing a Python script with syntax highlighting over SSH" loading="lazy"></div>
+      <div>
+        <h3><code>vim</code> works out of the box</h3>
+        <p>The alternate screen buffer (<code>?1049</code>/<code>?1047</code>/<code>?47</code>), DECSTBM scroll regions, cursor save/restore (DECSC/DECRC and SCOSC/SCORC), and cursor visibility (<code>?25</code>) are implemented — quit vim and your shell screen comes back. 256-color syntax highlighting renders as-is.</p>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="shot"><img src="images/sl.png" alt="the sl steam locomotive ASCII art running over SSH" loading="lazy"></div>
+      <div>
+        <h3>And yes, <code>sl</code> runs</h3>
+        <p>Absolute and relative cursor addressing (CUP/HVP/CUU/CUD/CUF/CUB/CHA/VPA), line/character insert and delete (IL/DL/ICH/DCH/ECH), display/line erase (ED/EL), and region scrolling (SU/SD) are all implemented, so full-screen animations that repaint the display render correctly.</p>
+      </div>
+    </div>
+
+    <table>
+      <tr><th>Supported</th><td>ECMA-48 CSI cursor and editing set / SGR: bold (as brightness), inverse, ANSI 16 colors, 256-color (<code>38;5</code>/<code>48;5</code>), 24-bit truecolor (<code>38;2</code>/<code>48;2</code>, quantized to RGB565) / alternate screen / scroll regions (DECSTBM) / 800-line scrollback / UTF-8 with CJK double-width / box-drawing, block, Braille (U+2800) and Powerline glyphs</td></tr>
+      <tr><th>Not supported</th><td>Mouse reporting (<code>?1000</code> family) / bracketed paste (<code>?2004</code>) / underline, italic, blink / window title (OSC 0/2) / reverse index (ESC M) / DEC special graphics charset / terminal queries (CPR/DSR/DA) / DCS imagery such as Sixel</td></tr>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Mount Tab5 storage on the server</h2>
+    <p class="lead">
+      When an SSH session starts, the firmware deploys a small FUSE helper to the server and
+      <strong>mounts the Tab5's microSD card and USB drive as <code>~/sd</code> and <code>~/usb</code> on the server</strong> —
+      file sharing in the reverse direction, where the server sees the Tab5.
+    </p>
+    <div class="feature">
+      <div class="shot"><img src="images/mount.png" alt="server shell showing tab5-sd and tab5-usb in df -h and writing to ~/sd with cp and tar" loading="lazy"></div>
+      <div>
+        <h3>Read and write straight from the server shell</h3>
+        <p>Your everyday commands — <code>cp</code>, <code>tar</code>, <code>rsync</code> — operate directly on Tab5 storage. Copy build artifacts or logs into <code>~/sd</code> and carry them home on the tablet. The server-side <code>image</code> command can even display pictures from <code>~/sd</code> on the Tab5 screen.</p>
+        <p class="note">The Tab5-local CLI exposes three volumes as a virtual filesystem: onboard flash (<code>/flash</code>), microSD (<code>/sd</code>), and USB storage (<code>/usb</code>). The server-side mounts cover microSD and USB. Server requirements: Python 3 + FUSE user mounts (<a href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/docs/SERVER_SETUP.md">setup guide</a>).</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
     <h2>MicroPython and graphics demos</h2>
     <p class="lead">Start MicroPython from the local CLI and run scripts from the SD card. Scripts draw through the <code>gfx</code> object and push frames with <code>gfx.present()</code>.</p>
     <pre class="term">tab5:/$ python -c print('hello')

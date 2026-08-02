@@ -182,6 +182,57 @@ footer p { margin-bottom: 6px; }
 
 <section>
   <div class="wrap">
+    <h2>ターミナル互換性</h2>
+    <p class="lead">
+      エスケープシーケンス規格 <strong>ECMA-48 (ANSI X3.64)</strong> のうち、<strong>VT100/VT220 サブセット + xterm 拡張</strong>を独自実装しています。
+      端末種別は <code>TERM=xterm-256color</code> として通知し、SSH の PTY サイズはフォント変更時にも自動で再通知されます (SIGWINCH)。
+      キーボード操作の TUI アプリ — <code>vim</code>、<code>htop</code>、<code>less</code>、ncurses 系、そして <code>sl</code> — がそのまま動きます。
+    </p>
+
+    <div class="feature">
+      <div class="shot"><img src="images/vim.png" alt="SSH経由でvimがPythonスクリプトをシンタックスハイライト付きで編集している画面" loading="lazy"></div>
+      <div>
+        <h3><code>vim</code> がそのまま使える</h3>
+        <p>オルタネートスクリーンバッファ (<code>?1049</code>/<code>?1047</code>/<code>?47</code>)、DECSTBM スクロール領域、カーソル保存/復元 (DECSC/DECRC・SCOSC/SCORC)、カーソル表示制御 (<code>?25</code>) を実装。vim を閉じれば元のシェル画面に戻ります。256色シンタックスハイライトもそのまま表示されます。</p>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="shot"><img src="images/sl.png" alt="SSH経由でslコマンドのSL蒸気機関車のアスキーアートが走っている画面" loading="lazy"></div>
+      <div>
+        <h3>もちろん <code>sl</code> も走る</h3>
+        <p>カーソル絶対/相対移動 (CUP/HVP/CUU/CUD/CUF/CUB/CHA/VPA)、行・文字の挿入/削除 (IL/DL/ICH/DCH/ECH)、画面/行消去 (ED/EL)、領域スクロール (SU/SD) を実装しているため、画面を書き換えながら動くアニメーション系コマンドも正しく描画されます。</p>
+      </div>
+    </div>
+
+    <table>
+      <tr><th>対応</th><td>ECMA-48 CSI カーソル制御・編集系一式 / SGR: 太字(輝度)・反転・ANSI 16色・256色 (<code>38;5</code>/<code>48;5</code>)・24bit truecolor (<code>38;2</code>/<code>48;2</code>、RGB565に量子化) / オルタネートスクリーン / スクロール領域 (DECSTBM) / スクロールバック800行 / UTF-8 + CJK全角幅 / 罫線・ブロック・点字 (U+2800台)・Powerline グリフ描画</td></tr>
+      <tr><th>非対応</th><td>マウスレポート (<code>?1000</code>系) / bracketed paste (<code>?2004</code>) / 下線・斜体・点滅 / ウィンドウタイトル (OSC 0/2) / 逆インデックス (ESC M) / DEC特殊グラフィック文字集合 / 端末問い合わせ応答 (CPR/DSR/DA) / Sixel等のDCS系画像</td></tr>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Tab5のストレージをサーバにマウント</h2>
+    <p class="lead">
+      SSH セッションを開始すると、ファームウェアが小さな FUSE ヘルパーをサーバへ自動展開し、
+      <strong>Tab5 の microSD カードとUSBメモリが、サーバ上の <code>~/sd</code> と <code>~/usb</code> にマウント</strong>されます。
+      逆方向の「サーバからTab5が見える」ファイル共有です。
+    </p>
+    <div class="feature">
+      <div class="shot"><img src="images/mount.png" alt="サーバ側シェルでdf -hにtab5-sdとtab5-usbが表示され、~/sdへcpやtarで書き込んでいる画面" loading="lazy"></div>
+      <div>
+        <h3>サーバのシェルから直接読み書き</h3>
+        <p><code>cp</code>・<code>tar</code>・<code>rsync</code> など普段のコマンドがそのまま Tab5 のストレージに使えます。サーバで生成したログやビルド成果物を <code>~/sd</code> へコピーすれば、そのまま Tab5 で持ち帰れます。サーバ側の <code>image</code> コマンドで <code>~/sd</code> の画像を Tab5 画面に表示することもできます。</p>
+        <p class="note">Tab5 のローカル CLI では、オンボードフラッシュ (<code>/flash</code>)・microSD (<code>/sd</code>)・USBメモリ (<code>/usb</code>) の3ボリュームを仮想ファイルシステムとして操作できます。サーバへのマウント対象は microSD と USB メモリの2つです。サーバ側要件は Python 3 + FUSE (<a href="https://github.com/airpocket-soundman/Tab5_thinclient/blob/main/docs/SERVER_SETUP.ja.md">セットアップ手順</a>)。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
     <h2>MicroPython と描画デモ</h2>
     <p class="lead">ローカルCLIから MicroPython を起動し、SDカード上のスクリプトを実行できます。<code>gfx</code> オブジェクト経由でスプライトに描画し、<code>gfx.present()</code> で画面へ転送します。</p>
     <pre class="term">tab5:/$ python -c print('hello')

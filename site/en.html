@@ -59,6 +59,12 @@ th { color: var(--muted); font-weight: 600; }
 footer { padding: 40px 0 60px; color: var(--muted); font-size: .88rem; }
 footer p { margin-bottom: 6px; }
 .caption { text-align: center; color: var(--muted); font-size: .85rem; margin-top: 8px; }
+.hero-img img, .shot img { cursor: zoom-in; }
+#lightbox { position: fixed; inset: 0; background: rgba(4,6,9,.92); display: none; align-items: center; justify-content: center; flex-direction: column; z-index: 1000; cursor: zoom-out; padding: 24px; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 96vw; max-height: 88vh; width: auto; border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 24px 80px rgba(0,0,0,.8); }
+#lightbox .lb-caption { color: var(--muted); font-size: .9rem; margin-top: 14px; max-width: 90vw; text-align: center; }
+#lightbox .lb-close { position: absolute; top: 16px; right: 24px; font-size: 2rem; color: var(--muted); font-family: var(--mono); }
 </style>
 </head>
 <body>
@@ -221,5 +227,35 @@ pio run -e tab5 -t upload
   </div>
 </footer>
 
+<div id="lightbox" role="dialog" aria-modal="true" aria-label="Enlarged image">
+  <span class="lb-close" aria-hidden="true">&times;</span>
+  <img alt="">
+  <div class="lb-caption"></div>
+</div>
+<script>
+(function () {
+  var lb = document.getElementById('lightbox');
+  var lbImg = lb.querySelector('img');
+  var lbCap = lb.querySelector('.lb-caption');
+  function close() {
+    lb.classList.remove('open');
+    lbImg.src = '';
+    document.body.style.overflow = '';
+  }
+  document.querySelectorAll('.hero-img img, .shot img').forEach(function (img) {
+    img.addEventListener('click', function () {
+      lbImg.src = img.src;
+      lbImg.alt = img.alt;
+      lbCap.textContent = img.alt;
+      lb.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    });
+  });
+  lb.addEventListener('click', close);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && lb.classList.contains('open')) close();
+  });
+})();
+</script>
 </body>
 </html>

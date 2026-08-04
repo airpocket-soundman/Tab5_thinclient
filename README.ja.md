@@ -19,6 +19,7 @@ PlatformIO、対象は Tab5、Tab5 Keyboard、microSD、Wi-Fi です。
 - SD操作、Wi-Fi、SSH/SCP、診断、Python実行用のLinux風ローカルCLI。
 - MicroPython REPL、`python -c`、SD上の `.py` 実行。
 - M5GFXスプライトを使うMicroPython向け `gfx` 描画API。
+- Grove/M-Bus端子を扱うMicroPython向けGPIO API(デジタル入出力、PWM、アナログ入力、I2C、SPI、UART)。
 - microSD、USBメモリ、SSHサーバ上ファイルのJPEG/PNG/BMP画像ビューア。
 - progressive Mandelbrot、sine plasma、wireframe hat、Life、starfield、
   maze などのSDカードデモ。
@@ -28,6 +29,7 @@ PlatformIO、対象は Tab5、Tab5 Keyboard、microSD、Wi-Fi です。
 - [Command list](docs/COMMANDS.md)
 - [コマンド一覧](docs/COMMANDS.ja.md)
 - [Python and graphics](docs/PYTHON.md)
+- [GPIO API](docs/GPIO.md)
 - [Demo scripts](docs/DEMOS.md)
 - [デモスクリプト](docs/DEMOS.ja.md)
 - [Third-party licenses](THIRD_PARTY_LICENSES.md)

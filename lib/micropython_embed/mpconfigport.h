@@ -20,3 +20,4 @@
 #define MICROPY_FLOAT_IMPL                   (MICROPY_FLOAT_IMPL_DOUBLE)
 #define MICROPY_ENABLE_EXTERNAL_IMPORT       (0)
 #define MICROPY_PY_IO                        (0)
+#define MICROPY_ERROR_REPORTING              (MICROPY_ERROR_REPORTING_NORMAL)

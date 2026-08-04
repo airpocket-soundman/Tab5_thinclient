@@ -5,11 +5,112 @@
 extern "C" {
 #include "port/micropython_embed.h"
 #include "py/runtime.h"
+#include "tab5_gpio_bridge.h"
 }
 
 namespace {
 constexpr size_t MicroPythonHeapSize = 256 * 1024;
 constexpr const char* GfxMarker = "\x1f" "GFX ";
+
+// Defined once per VM instead of per script: globals survive between runs, so
+// re-parsing these classes on every execution would be wasted work.
+constexpr const char* GpioPrelude = R"PY(
+class Pin:
+    IN = 0
+    OUT = 1
+    IN_PULLUP = 2
+    IN_PULLDOWN = 3
+
+    def __init__(self, pin, mode=0):
+        self.pin = pin
+        self.mode = mode
+        _tab5_pin_mode(pin, mode)
+
+    def value(self, level=None):
+        if level is None:
+            return _tab5_pin_read(self.pin)
+        _tab5_pin_write(self.pin, level)
+
+    def on(self):
+        _tab5_pin_write(self.pin, 1)
+
+    def off(self):
+        _tab5_pin_write(self.pin, 0)
+
+    def toggle(self):
+        _tab5_pin_write(self.pin, 0 if _tab5_pin_read(self.pin) else 1)
+
+    def pwm(self, duty, freq=5000):
+        _tab5_pwm_write(self.pin, duty, freq)
+
+    def release(self):
+        _tab5_pwm_release(self.pin)
+
+class ADC:
+    def __init__(self, pin):
+        self.pin = pin
+
+    def read(self):
+        return _tab5_adc_read(self.pin)
+
+    def read_mv(self):
+        return _tab5_adc_mv(self.pin)
+
+class I2C:
+    def __init__(self, sda, scl, freq=100000):
+        _tab5_i2c_init(sda, scl, freq)
+
+    def scan(self):
+        return _tab5_i2c_scan()
+
+    def write(self, addr, data, stop=True):
+        return _tab5_i2c_write(addr, data, stop)
+
+    def read(self, addr, nbytes):
+        return _tab5_i2c_read(addr, nbytes)
+
+    def read_reg(self, addr, reg, nbytes=1):
+        return _tab5_i2c_write_read(addr, bytes([reg]), nbytes)
+
+    def write_reg(self, addr, reg, data):
+        return _tab5_i2c_write(addr, bytes([reg]) + bytes(data), True)
+
+    def deinit(self):
+        _tab5_i2c_deinit()
+
+class SPI:
+    def __init__(self, sck, miso, mosi, freq=1000000, mode=0):
+        _tab5_spi_init(sck, miso, mosi, freq, mode)
+
+    def transfer(self, data, cs=-1):
+        return _tab5_spi_transfer(cs, data)
+
+    def write(self, data, cs=-1):
+        _tab5_spi_transfer(cs, data)
+
+    def deinit(self):
+        _tab5_spi_deinit()
+
+class UART:
+    def __init__(self, port, baud=115200, rx=-1, tx=-1):
+        self.port = port
+        _tab5_uart_init(port, baud, rx, tx)
+
+    def write(self, data):
+        return _tab5_uart_write(self.port, data)
+
+    def read(self, nbytes, timeout=100):
+        return _tab5_uart_read(self.port, nbytes, timeout)
+
+    def any(self):
+        return _tab5_uart_any(self.port)
+
+    def deinit(self):
+        _tab5_uart_deinit(self.port)
+
+def pins():
+    return _tab5_pin_list()
+)PY";
 PythonRunner* activeRunner = nullptr;
 PythonRunner::Output activeOutput = nullptr;
 
@@ -82,6 +183,8 @@ bool PythonRunner::ensureVm()
     }
     int stackTop = 0;
     mp_embed_init(_heap, _heapSize, &stackTop);
+    tab5_gpio_register_globals();
+    mp_embed_exec_str_status(GpioPrelude);
     _started = true;
     _lastError = "";
     return true;

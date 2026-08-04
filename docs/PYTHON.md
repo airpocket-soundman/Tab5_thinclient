@@ -72,6 +72,22 @@ Available methods:
 Colors are integer `0xRRGGBB` values.
 `gfx.mono()` packs cells into hexadecimal bits, left to right, top to bottom.
 
+## GPIO API
+
+Scripts also receive `Pin`, `ADC`, `I2C`, `SPI`, `UART` and `pins()` as globals,
+covering the Tab5's external connectors. Only pins that reach a connector and
+are unused by on-board hardware are accepted.
+
+```python
+led = Pin(17, Pin.OUT)
+led.toggle()
+print(ADC(16).read_mv())
+print(I2C(53, 54).scan())
+```
+
+See [GPIO API](GPIO.md) for the pin table, the SPI/UART/I2C details and the
+error codes.
+
 ## Stopping Graphics Scripts
 
 Graphics scripts are interrupted at `gfx.present()` so animations can remain

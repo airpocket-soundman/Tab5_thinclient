@@ -104,6 +104,13 @@ def main():
         mpconfig_text += "#define MICROPY_ENABLE_EXTERNAL_IMPORT       (0)\n"
     if "MICROPY_PY_IO" not in mpconfig_text:
         mpconfig_text += "#define MICROPY_PY_IO                        (0)\n"
+    if "MICROPY_ERROR_REPORTING" not in mpconfig_text:
+        # The minimum ROM level drops exception messages entirely, which makes
+        # both Python errors and the GPIO bridge's diagnostics unreadable.
+        mpconfig_text += (
+            "#define MICROPY_ERROR_REPORTING              "
+            "(MICROPY_ERROR_REPORTING_NORMAL)\n"
+        )
     mpconfig.write_text(mpconfig_text, encoding="utf-8")
     embed_header = OUT / "port" / "micropython_embed.h"
     embed_header.write_text(

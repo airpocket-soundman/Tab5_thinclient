@@ -1,0 +1,23 @@
+gpio.py - GPIO, PWM, ADC and I2C smoke test
+
+Run:
+  python /gpio.py [led_pin] [button_pin]
+
+Arguments:
+  led_pin     Pin driven as an output and faded with PWM. Default: 17 (Port B p1).
+  button_pin  Pin read as an input with the internal pull-up. Default: 52 (Port B p2).
+
+Notes:
+  Nothing needs to be wired up. Each step prints what it observed and continues,
+  so the script also works as a quick check that the GPIO bridge is alive.
+
+  The I2C scan uses Port A (GPIO 53/54), the Grove connector intended for user
+  devices. It is bit-banged, because both hardware I2C controllers are already
+  taken by the Tab5 Keyboard and the internal bus.
+
+  Only pins reachable on an external connector are accepted; anything else
+  raises ValueError. Call pins() to list them.
+
+Examples:
+  python /gpio.py
+  python /gpio.py 2 3

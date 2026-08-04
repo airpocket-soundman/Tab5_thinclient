@@ -20,6 +20,8 @@ Wi-Fi.
 - Linux-like local CLI for SD files, Wi-Fi, SSH/SCP, diagnostics, and Python.
 - Embedded MicroPython runner for REPL, `python -c`, and SD-card scripts.
 - MicroPython graphics API backed by the firmware M5GFX sprite.
+- MicroPython GPIO API for the Grove and M-Bus connectors: digital in/out, PWM,
+  analog in, I2C, SPI, and UART.
 - On-device JPEG/PNG/BMP image viewer from microSD, USB storage, or SSH server files.
 - SD-card demos: progressive Mandelbrot, sine plasma, wireframe hat, Life,
   starfield, and maze.
@@ -29,6 +31,7 @@ Wi-Fi.
 - [Command list](docs/COMMANDS.md)
 - [コマンド一覧](docs/COMMANDS.ja.md)
 - [Python and graphics](docs/PYTHON.md)
+- [GPIO API](docs/GPIO.md)
 - [Demo scripts](docs/DEMOS.md)
 - [デモスクリプト](docs/DEMOS.ja.md)
 - [サーバ側セットアップ](docs/SERVER_SETUP.ja.md)
